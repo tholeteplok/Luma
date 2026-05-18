@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luma — Design Prototype v3 (NVC-Aligned)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Dark mode (default) */
+    --bg-base: #0C0C14;
+    --bg-surface: #12121E;
+    --bg-elevated: #191927;
+    --bg-subtle: #1E1E30;
+    --border-faint: #1F1F32;
+    --border-subtle: #2A2A42;
+    --border-medium: #363654;
+    --text-primary: #E8E8F2;
+    --text-secondary: #B4B4CC;
+    --text-tertiary: #7A7A96;
+    --text-subtle: #4A4A68;
+    --accent: #6B6BCA;
+    --accent-light: #8A8ADA;
+    --accent-muted: #3D3D7A;
+    --info-text: #7B9FD4;
+    --info-ind: #3A5A8A;
+    --notice-text: #C4944A;
+    --notice-ind: #7A5220;
+    --gentle-text: #6BA896;
+    --gentle-ind: #2E5A50;
+    --warn-text: #B87066;
+    --warn-ind: #6A3028;
+    --focus-color: #6B8FCA;
+    --distract-color: #8A6B8A;
+    --rest-color: #2A2A3E;
+  }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  .nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border-faint);
+    padding: 0 16px;
+    background: var(--bg-base);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding: 12px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { color: var(--text-secondary); }
+  .nav-btn.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .phone {
+    width: 320px;
+    min-height: 620px;
+    background: var(--bg-base);
+    border-radius: 32px;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto;
+  }
+  .phone-inner { padding: 20px 20px 24px; height: 100%; }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+  .status-time {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .status-dot {
+    width: 14px; height: 7px;
+    border-radius: 1px;
+    border: 1px solid var(--text-tertiary);
+    position: relative;
+  }
+  .status-dot::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 1px; right: 3px; bottom: 1px;
+    background: var(--text-secondary);
+    border-radius: 0.5px;
+  }
+
+  .luma-logo {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .ambient-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 160px;
+    position: relative;
+    margin: 8px 0;
+  }
+  .amb-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent-muted);
+    animation: breathe 4s ease-in-out infinite;
+  }
+  .amb-circle:nth-child(1) { width: 120px; height: 120px; opacity: 0.15; filter: blur(20px); }
+  .amb-circle:nth-child(2) { width: 80px; height: 80px; opacity: 0.25; filter: blur(14px); animation-delay: 0.4s; }
+  .amb-circle:nth-child(3) { width: 40px; height: 40px; opacity: 0.4; filter: blur(8px); animation-delay: 0.8s; }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.04); opacity: 0.85; }
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-indicator {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .card-inner { padding-left: 14px; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.6px;
+    margin-bottom: 14px;
+  }
+
+  .insight-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+  }
+  .insight-sub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .divider {
+    height: 1px;
+    background: var(--border-faint);
+    margin-bottom: 16px;
+  }
+  .feedback-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+  }
+  .feedback-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .fb-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-tertiary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fb-btn:hover { border-color: var(--border-medium); color: var(--text-secondary); }
+  .fb-btn.selected { background: var(--bg-subtle); border-color: var(--accent-muted); color: var(--text-primary); }
+  .footer-hint {
+    font-size: 11px;
+    color: var(--text-subtle);
+    line-height: 1.6;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .date-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 24px;
+  }
+
+  /* ── TINY TIMELINE (Non-Numeric) ── */
+  .tiny-timeline-wrap {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 52px;
+    margin-bottom: 6px;
+  }
+  .t-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .t-col:hover { opacity: 0.7; }
+  .t-col.selected .t-bar { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+  .t-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    transition: all 0.3s;
+  }
+  .t-label-day {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .t-label-day.today { color: var(--text-primary); font-weight: 500; }
+  .t-today-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 2px;
+  }
+  .tiny-hint {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-subtle);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  /* ── FULL TIMELINE (Numeric on Tap) ── */
+  .full-tl-back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  .full-tl-back:hover { color: var(--text-primary); }
+  .full-tl-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 300;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .full-tl-narrative {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--text-tertiary);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .metric-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .metric-card {
+    flex: 1;
+    text-align: center;
+    padding: 14px 10px;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    border: 1px solid var(--border-faint);
+  }
+  .metric-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--text-primary);
+    display: block;
+  }
+  .metric-lbl {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    display: block;
+    margin-top: 4px;
+  }
+  .legend-row {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .full-tl-close {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-tertiary);
+    line-height: 1.7;
+    margin-top: 20px;
+  }
+
+  /* ── GENTLE NUDGE (NVC) ── */
+  .nudge-pulse {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gentle-text);
+    display: inline-block;
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+    vertical-align: middle;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .quiet-ack {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-subtle);
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+
+  .spacer { height: 16px; }
+  .spacer-sm { height: 8px; }
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 0 4px;
+  }
+  .ctrl-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--accent-muted); color: var(--text-primary); }
+  .ctrl-btn.active { background: var(--accent-muted); border-color: var(--accent-muted); color: var(--accent-light); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showScreen('home')">Home (Tiny TL)</button>
+  <button class="nav-btn" onclick="showScreen('fullTimeline')">Full Timeline</button>
+  <button class="nav-btn" onclick="showScreen('nudge')">Nudge (NVC)</button>
+  <button class="nav-btn" onclick="showScreen('insight')">Insight (NVC)</button>
+</nav>
+
+<div style="padding: 20px 16px;">
+
+<!-- ═══════ HOME — TINY TIMELINE (NON-NUMERIC) ═══════ -->
+<div id="screen-home" class="screen active">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">HOME — Tiny Timeline (No Numbers)</p>
+      <div class="phone" style="width: 300px;">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span class="status-time">09:14</span>
+            <div class="status-dot"></div>
+          </div>
+          <div class="header-row">
+            <span class="luma-logo">Luma</span>
+          </div>
+          <div class="date-label">Sabtu, 17 Mei</div>
+          <div class="ambient-wrap" style="height: 120px; margin-bottom: 20px;">
+            <div class="amb-circle" style="background: #4A6A9A;"></div>
+            <div class="amb-circle" style="background: #5A5A8A;"></div>
+            <div class="amb-circle" style="background: #6B6BCA;"></div>
+          </div>
+
+          <!-- Insight Card — NVC Narrative -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="card-indicator" style="background: var(--gentle-ind);"></div>
+            <div class="card-inner">
+              <div class="badge" style="background: #101E1B; color: var(--gentle-text);">
+                <span class="nudge-pulse"></span>RITME BERUBAH
+              </div>
+              <div class="insight-text">Tiga hari terakhir, ritmemu lebih padat dari biasanya.</div>
+              <div class="insight-sub">Tidak ada yang salah. Hanya beban yang sedang tinggi.</div>
+              <div class="divider"></div>
+              <div class="feedback-label">Apakah ini terasa benar?</div>
+              <div class="feedback-row">
+                <button class="fb-btn" onclick="this.classList.toggle('selected')">Ya, kurang lebih.</button>
+                <button class="fb-btn" onclick="this.classList.toggle('selected')">Belum yakin.</button>
+              </div>
+              <div class="footer-hint">Luma akan terus mengamati.</div>
+            </div>
+          </div>
+
+          <!-- TINY TIMELINE — NON-NUMERIC -->
+          <div class="section-label">MINGGU INI</div>
+          <div class="tiny-timeline-wrap" id="tiny-timeline"></div>
+          <div style="display: flex; gap: 3px;" id="tiny-labels"></div>
+          <div class="tiny-hint" id="tiny-hint">tap untuk detail</div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 200px;">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">TINY TIMELINE</p>
+      <p style="font-size: 11px; color: var(--text-subtle); line-height: 1.6;">
+        ✅ Hanya garis tekstur<br>
+        ✅ Label hari<br>
+        ✅ Hint "tap untuk detail"<br>
+        ❌ Tidak ada angka<br>
+        ❌ Tidak ada skor
+      </p>
+      <div class="spacer"></div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">INTERAKSI</p>
+      <button class="ctrl-btn" onclick="simulateDayTap()">Tap hari (simulasi)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ FULL TIMELINE (NUMERIC ON TAP) ═══════ -->
+<div id="screen-fullTimeline" class="screen">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">FULL TIMELINE — Metrics Here Only</p>
+      <div class="phone" style="width: 300px;">
+        <div class="phone-inner">
+          <div class="full-tl-back" onclick="showScreen('home')">
+            ← Timeline
+          </div>
+          <div class="full-tl-title">Selasa, 13 Mei</div>
+          <div class="full-tl-narrative">Pagi yang tenang dengan fokus yang stabil.</div>
+
+          <!-- METRICS — HANYA DI LAYAR INI -->
+          <div class="metric-row">
+            <div class="metric-card">
+              <span class="metric-val">3j 20m</span>
+              <span class="metric-lbl">Fokus</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-val">1j 45m</span>
+              <span class="metric-lbl">Distraksi</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-val">7j 10m</span>
+              <span class="metric-lbl">Tidur</span>
+            </div>
+          </div>
+
+          <!-- Time-of-day grid placeholder -->
+          <div style="height: 100px; background: var(--bg-surface); border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-subtle); font-size: 11px;">
+            Time-of-day grid (Phase 1+)
+          </div>
+
+          <div class="legend-row">
+            <div class="legend-item"><div class="legend-dot" style="background: var(--focus-color)"></div>Fokus</div>
+            <div class="legend-item"><div class="legend-dot" style="background: var(--distract-color)"></div>Distraksi</div>
+            <div class="legend-item"><div class="legend-dot" style="background: var(--rest-color)"></div>Istirahat</div>
+          </div>
+          <div class="full-tl-close">"Selasa adalah hari paling fokusmu minggu ini."</div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 200px;">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">FULL TIMELINE</p>
+      <p style="font-size: 11px; color: var(--text-subtle); line-height: 1.6;">
+        ✅ Muncul setelah tap<br>
+        ✅ Ada angka metrik<br>
+        ✅ Narasi observasional<br>
+        ❌ Tidak ada di home
+      </p>
+      <div class="spacer"></div>
+      <p style="font-size: 10px; color: var(--text-subtle); line-height: 1.5;">
+        <strong>Progressive disclosure:</strong><br>
+        User memilih kapan<br>
+        ingin melihat detail.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ NUDGE (NVC-ALIGNED) ═══════ -->
+<div id="screen-nudge" class="screen">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">GENTLE NUDGE — NVC Narrative (No Score)</p>
+      <div class="phone" style="width: 300px; min-height: 500px;">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span class="status-time">14:23</span>
+            <div class="status-dot"></div>
+          </div>
+          <div class="header-row">
+            <span class="luma-logo">Luma</span>
+          </div>
+          <div class="date-label">Kamis, 15 Mei</div>
+          <div class="ambient-wrap" style="height: 100px; margin-bottom: 20px;">
+            <div class="amb-circle" style="background: var(--gentle-ind); opacity: 0.3;"></div>
+            <div class="amb-circle" style="background: var(--gentle-text); opacity: 0.2;"></div>
+          </div>
+          <div class="card" id="nudge-card">
+            <div class="card-indicator" style="background: var(--gentle-ind);"></div>
+            <div class="card-inner">
+              <div class="badge" style="background: #101E1B; color: var(--gentle-text);">
+                <span class="nudge-pulse"></span>POLA BERUBAH
+              </div>
+              <div class="insight-text" id="nudge-text">Tiga hari terakhir, sesi fokusmu lebih pendek dan sering terganggu. Pola ini muncul saat beban kerja tinggi.</div>
+              <div class="quiet-ack" id="nudge-ack">Tidak ada yang perlu dilakukan sekarang. Luma hanya mencatat.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 200px;">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">PILIH SKENARIO</p>
+      <button class="ctrl-btn active" onclick="setNudge(0)">Burnout ringan</button>
+      <button class="ctrl-btn" onclick="setNudge(1)">Late night</button>
+      <button class="ctrl-btn" onclick="setNudge(2)">Distraksi berulang</button>
+      <div class="spacer"></div>
+      <p style="font-size: 10px; color: var(--text-subtle); line-height: 1.5;">
+        <strong>ENGINE (internal):</strong><br>
+        BurnoutScore >60 = trigger<br><br>
+        <strong>USER (display):</strong><br>
+        Narasi NVC, tanpa skor<br><br>
+        ❌ "68/100"<br>
+        ✅ "Ritmemu lebih padat..."
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ INSIGHT TYPES (NVC) ═══════ -->
+<div id="screen-insight" class="screen">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">INSIGHT — NVC vs ANTI-NVC</p>
+      <div class="phone" style="width: 300px; min-height: auto;">
+        <div class="phone-inner">
+          <!-- NVC Insight 1 -->
+          <div class="card" style="margin-bottom: 12px;">
+            <div class="card-indicator" style="background: var(--gentle-ind);"></div>
+            <div class="card-inner">
+              <div class="badge" style="background: #101E1B; color: var(--gentle-text);">✅ NVC</div>
+              <div class="insight-text" style="font-size: 16px;">Tiga hari terakhir, ritmemu lebih padat dari biasanya.</div>
+              <div class="insight-sub" style="font-size: 12px;">Tidak ada yang salah. Hanya beban yang sedang tinggi.</div>
+            </div>
+          </div>
+          <!-- NVC Insight 2 -->
+          <div class="card" style="margin-bottom: 12px;">
+            <div class="card-indicator" style="background: var(--info-ind);"></div>
+            <div class="card-inner">
+              <div class="badge" style="background: #151E2E; color: var(--info-text);">✅ NVC</div>
+              <div class="insight-text" style="font-size: 16px;">Malam tadi sedikit berbeda dari biasanya. Tidak ada yang perlu dikhawatirkan.</div>
+            </div>
+          </div>
+          <!-- ANTI-NVC -->
+          <div class="card" style="opacity: 0.4; position: relative;">
+            <div style="position: absolute; top: -8px; right: -8px; background: var(--warn-text); color: white; font-size: 9px; padding: 2px 8px; border-radius: 4px;">❌ ANTI-NVC</div>
+            <div class="card-indicator" style="background: var(--warn-ind);"></div>
+            <div class="card-inner">
+              <div class="badge" style="background: #1E1010; color: var(--warn-text);">BURNOUT</div>
+              <div class="insight-text" style="font-size: 16px;">Burnout Score: 68/100</div>
+              <div class="insight-sub" style="font-size: 12px;">Segera kurangi screen time!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 200px;">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">NVC RULES</p>
+      <p style="font-size: 10px; color: var(--text-subtle); line-height: 1.6;">
+        <strong>✅ Observasi konkret</strong><br>
+        <strong>✅ Konteks waktu</strong><br>
+        <strong>✅ Tanpa evaluasi</strong><br>
+        <strong>✅ Self-compassion</strong><br><br>
+        <strong>❌ Angka mentah</strong><br>
+        <strong>❌ Skor</strong><br>
+        <strong>❌ Perintah</strong><br>
+        <strong>❌ Label menghakimi</strong>
+      </p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const days = ['Sen','Sel','Rab','Kam','Jum','Sab','Ahd'];
+const weekQuality = [0.8, 0.9, 0.4, 0.7, 0.3, 0.85, 0.6];
+let selectedDay = 6;
+
+function getBarColor(q) {
+  if (q >= 0.7) return '#6B8FCA';
+  if (q >= 0.4) return '#3D3D7A';
+  return '#8A6B8A';
+}
+
+function buildTinyTimeline() {
+  const tl = document.getElementById('tiny-timeline');
+  const labels = document.getElementById('tiny-labels');
+  if (!tl) return;
+  tl.innerHTML = '';
+  labels.innerHTML = '';
+
+  weekQuality.forEach((q, i) => {
+    const col = document.createElement('div');
+    col.className = 't-col' + (i === selectedDay ? ' selected' : '');
+    col.onclick = () => { selectedDay = i; buildTinyTimeline(); };
+
+    const bar = document.createElement('div');
+    bar.className = 't-bar';
+    const h = 10 + (q * 34);
+    bar.style.cssText = `height:${h}px;background:${getBarColor(q)};width:100%;`;
+
+    col.appendChild(bar);
+    tl.appendChild(col);
+
+    // Day label
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'flex:1;text-align:center;';
+    const isToday = i === 6;
+    lbl.innerHTML = `<div style="font-size:10px;color:${isToday?'var(--text-primary)':'var(--text-tertiary)'};font-weight:${isToday?500:400};">${days[i]}</div>${isToday?'<div class="t-today-dot"></div>':''}`;
+    labels.appendChild(lbl);
+  });
+
+  // Hint
+  const hint = document.getElementById('tiny-hint');
+  if (hint) hint.textContent = 'tap untuk detail';
+}
+
+function simulateDayTap() {
+  if (typeof showScreen === 'function') {
+    showScreen('fullTimeline');
+  }
+}
+
+const nudgeScenarios = [
+  {
+    text: 'Tiga hari terakhir, sesi fokusmu lebih pendek dan sering terganggu. Pola ini muncul saat beban kerja tinggi.',
+    ack: 'Tidak ada yang perlu dilakukan sekarang. Luma hanya mencatat.',
+  },
+  {
+    text: 'Malam tadi terasa berbeda dari ritme biasamu. Layar menyala lebih dari satu jam setelah tengah malam.',
+    ack: 'Luma hanya mencatat. Kamu yang mengetahui alasannya.',
+  },
+  {
+    text: 'Seminggu ini kamu berpindah antar aplikasi lebih sering dari biasanya. Cascading pattern terdeteksi pada tiga sesi.',
+    ack: 'Tidak ada yang perlu dilakukan sekarang. Luma hanya mencatat.',
+  },
+];
+
+function setNudge(i) {
+  const n = nudgeScenarios[i];
+  document.getElementById('nudge-text').textContent = n.text;
+  document.getElementById('nudge-ack').textContent = n.ack;
+  document.querySelectorAll('#screen-nudge .ctrl-btn').forEach((b, j) => {
+    b.classList.toggle('active', j === i);
+  });
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const screenEl = document.getElementById('screen-' + name);
+  if (screenEl) screenEl.classList.add('active');
+  if (event && event.target && event.target.classList.contains('nav-btn')) {
+    event.target.classList.add('active');
+  } else {
+    // Find the button for this screen
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      if (b.textContent.toLowerCase().includes(name.toLowerCase()) || 
+          (name === 'fullTimeline' && b.textContent.includes('Full')) ||
+          (name === 'home' && b.textContent.includes('Home')) ||
+          (name === 'nudge' && b.textContent.includes('Nudge')) ||
+          (name === 'insight' && b.textContent.includes('Insight'))) {
+        b.classList.add('active');
+      }
+    });
+  }
+}
+
+// Init
+buildTinyTimeline();
+setNudge(0);
+</script>
+</body>
+</html>

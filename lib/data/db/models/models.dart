@@ -1,3 +1,4 @@
+export 'event_type.dart';
 export 'raw_event.dart';
 export 'daily_summary_model.dart';
 export 'weekly_profile.dart';

@@ -1,1 +1,47 @@
-Nothing needs to be added to .gitignore since only a README.md file was modified and no build artifacts, dependencies, or temporary files were detected in the changes.
+```
+# Dependencies
+.dart_tool/
+.build/
+dependencies/
+
+# Logs
+*.log
+**/logs
+
+# Environment variables
+.env
+.env.local
+.env.*
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Build outputs
+build/
+dist/
+target/
+
+# Python related (if any Python files exist in project)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Temporary files
+*.tmp
+*.temp
+```

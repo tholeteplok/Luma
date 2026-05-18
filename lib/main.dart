@@ -7,8 +7,14 @@ import 'package:luma/config/colors.dart';
 import 'package:luma/config/design_tokens.dart';
 import 'package:luma/config/typography.dart';
 import 'package:luma/presentation/pages/onboarding_page.dart';
+import 'package:luma/core/di/di.dart' as di;
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize dependencies (database, encryption, etc.)
+  await di.initDependencies();
+  
   runApp(
     const ProviderScope(
       child: LumaApp(),

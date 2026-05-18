@@ -38,6 +38,7 @@ dependencies:
   # Database
   isar: ^3.1.0
   isar_flutter_libs: ^3.1.0
+  path_provider: ^2.1.0
 
   # Encryption & Security (ADR-001: key = random via Google Drive C1)
   cryptography: ^2.5.0          # AES-256-GCM

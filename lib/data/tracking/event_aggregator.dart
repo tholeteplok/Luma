@@ -3,6 +3,7 @@ import 'package:luma/core/platform/screen_state_listener.dart';
 import 'package:luma/data/db/database_service.dart';
 import 'package:luma/data/db/models/event_type.dart';
 import 'package:luma/data/db/models/raw_event.dart';
+import 'package:luma/data/db/models/daily_app_metric.dart';
 import 'package:logging/logging.dart';
 
 /// Service untuk mengagregasi raw events menjadi DailySummary.
@@ -292,5 +293,110 @@ class EventAggregator {
     }
 
     return distractionCount;
+  }
+
+  /// Aggregate raw events by app untuk menghasilkan DailyAppMetric
+  /// Dipanggil setiap jam oleh background task
+  Future<List<DailyAppMetric>> aggregateByApp(List<RawEvent> events) async {
+    final metrics = <String, DailyAppMetric>{};
+    
+    // Group events by package and date
+    final groupedEvents = <String, List<RawEvent>>{};
+    
+    for (final event in events) {
+      if (event.type != EventType.app_usage || !event.isForeground) continue;
+      
+      final key = '${event.packageName}_${event.timestamp.toIso8601String().substring(0, 10)}';
+      if (!groupedEvents.containsKey(key)) {
+        groupedEvents[key] = [];
+      }
+      groupedEvents[key]!.add(event);
+    }
+    
+    // Convert ke DailyAppMetric
+    for (final entry in groupedEvents.entries) {
+      final parts = entry.key.split('_');
+      final packageName = parts[0];
+      final dateStr = parts[1];
+      final date = DateTime.parse(dateStr);
+      
+      final appEvents = entry.value;
+      final totalDuration = appEvents.fold<int>(0, (sum, e) => sum + e.durationSeconds);
+      final sessionCount = appEvents.length;
+      
+      // Find first and last use hour
+      final hours = appEvents.map((e) => e.timestamp.hour).toList();
+      hours.sort();
+      final firstUseHour = hours.first;
+      final lastUseHour = hours.last;
+      
+      final metric = DailyAppMetric(
+        date: date,
+        packageName: packageName,
+        totalDurationSeconds: totalDuration,
+        sessionCount: sessionCount,
+        firstUseHour: firstUseHour,
+        lastUseHour: lastUseHour,
+      );
+      
+      metrics[entry.key] = metric;
+    }
+    
+    return metrics.values.toList();
+  }
+  
+  /// Generate weekly profile dari multiple daily summaries
+  Future<WeeklyProfile> generateWeeklyProfile(List<DailySummary> summaries) async {
+    if (summaries.isEmpty) {
+      throw ArgumentError('Cannot generate weekly profile from empty summaries');
+    }
+    
+    // Sort summaries by date
+    final sortedSummaries = List<DailySummary>.from(summaries)
+      ..sort((a, b) => a.date.compareTo(b.date));
+    
+    final weekStart = sortedSummaries.first.date;
+    final totalScreenTime = sortedSummaries.fold<int>(
+      0,
+      (sum, s) => sum + s.totalScreenTimeSeconds,
+    );
+    
+    final avgFocusScore = sortedSummaries.fold<double>(
+      0,
+      (sum, s) => sum + s.focusScore,
+    ) / sortedSummaries.length;
+    
+    final totalDistractions = sortedSummaries.fold<int>(
+      0,
+      (sum, s) => sum + s.distractionCount,
+    );
+    
+    // Aggregate top apps dari semua hari
+    final appUsageMap = <String, int>{};
+    for (final summary in sortedSummaries) {
+      for (final entry in summary.appUsageMinutes.entries) {
+        appUsageMap[entry.key] = (appUsageMap[entry.key] ?? 0) + entry.value;
+      }
+    }
+    
+    final topApps = appUsageMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    final topAppsList = topApps.take(10).map((entry) {
+      return {
+        'packageName': entry.key,
+        'durationMinutes': entry.value,
+      };
+    }).toList();
+    
+    return WeeklyProfile(
+      weekStart: weekStart,
+      totalScreenTimeSeconds: totalScreenTime,
+      averageDailyScreenTimeSeconds: (totalScreenTime / sortedSummaries.length).round(),
+      averageFocusScore: avgFocusScore,
+      totalDistractions: totalDistractions,
+      topApps: topAppsList,
+      dayCount: sortedSummaries.length,
+    );
   }
 }

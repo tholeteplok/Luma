@@ -18,6 +18,7 @@ class DatabaseService {
       [
         RawEventSchema,
         DailySummarySchema,
+        DailyAppMetricSchema,
         WeeklyProfileSchema,
         BaselineSchema,
         InsightSchema,
@@ -61,6 +62,11 @@ class DatabaseService {
         .filter()
         .timestampBetween(startTime, endTime)
         .findAll();
+  }
+
+  /// Get raw events between two dates (alias for getRawEvents)
+  Future<List<RawEvent>> getRawEventsBetween(DateTime start, DateTime end) async {
+    return await getRawEvents(startTime: start, endTime: end);
   }
 
   /// Get raw events untuk package tertentu dalam rentang waktu
@@ -122,7 +128,103 @@ class DatabaseService {
         .findAll();
   }
 
+  /// Get daily summary by date (alias for getDailySummary)
+  Future<DailySummary?> getDailySummaryByDate(DateTime date) async {
+    return await getDailySummary(date);
+  }
+
+  /// Get daily summaries between two dates (alias for getDailySummaries)
+  Future<List<DailySummary>> getDailySummariesBetween(DateTime start, DateTime end) async {
+    return await getDailySummaries(startTime: start, endTime: end);
+  }
+
+  // ==================== WEEKLY PROFILES ====================
+
+  /// Save weekly profile
+  Future<void> saveWeeklyProfile(WeeklyProfile profile) async {
+    await db.writeTxn(() async {
+      await db.weeklyProfiles.put(profile);
+    });
+  }
+
+  /// Get weekly profile for specific week start date
+  Future<WeeklyProfile?> getWeeklyProfile(DateTime weekStart) async {
+    final normalizedDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
+    return await db.weeklyProfiles
+        .filter()
+        .weekStartEqualTo(normalizedDate)
+        .findFirst();
+  }
+
+  /// Get weekly profiles in date range
+  Future<List<WeeklyProfile>> getWeeklyProfilesBetween(DateTime start, DateTime end) async {
+    return await db.weeklyProfiles
+        .filter()
+        .weekStartBetween(start, end)
+        .findAll();
+  }
+
+  // ==================== DAILY METRICS (AGGREGATED) ====================
+
+  /// Save daily metric (aggregated app usage)
+  Future<void> saveDailyMetric(DailyAppMetric metric) async {
+    await db.writeTxn(() async {
+      await db.dailyMetrics.put(metric);
+    });
+  }
+
+  /// Get daily metrics for a specific date
+  Future<List<DailyAppMetric>> getDailyMetricsForDate(DateTime date) async {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    return await db.dailyMetrics
+        .filter()
+        .dateEqualTo(normalizedDate)
+        .findAll();
+  }
+
   // ==================== CLEANUP ====================
+
+  /// Delete raw events older than specified date
+  Future<int> deleteRawEventsOlderThan(DateTime date) async {
+    final expiredEvents = await db.rawEvents
+        .filter()
+        .timestampLessThan(date)
+        .findAll();
+    
+    if (expiredEvents.isNotEmpty) {
+      await db.rawEvents.deleteAll(expiredEvents.map((e) => e.id));
+      return expiredEvents.length;
+    }
+    return 0;
+  }
+
+  /// Delete daily summaries older than specified date
+  Future<int> deleteDailySummariesOlderThan(DateTime date) async {
+    final expiredSummaries = await db.dailySummaries
+        .filter()
+        .dateLessThan(date)
+        .findAll();
+    
+    if (expiredSummaries.isNotEmpty) {
+      await db.dailySummaries.deleteAll(expiredSummaries.map((e) => e.id));
+      return expiredSummaries.length;
+    }
+    return 0;
+  }
+
+  /// Delete weekly profiles older than specified date
+  Future<int> deleteWeeklyProfilesOlderThan(DateTime date) async {
+    final expiredProfiles = await db.weeklyProfiles
+        .filter()
+        .weekStartLessThan(date)
+        .findAll();
+    
+    if (expiredProfiles.isNotEmpty) {
+      await db.weeklyProfiles.deleteAll(expiredProfiles.map((e) => e.id));
+      return expiredProfiles.length;
+    }
+    return 0;
+  }
 
   // Helper methods untuk cleanup berdasarkan fade granularity
   Future<void> cleanupExpiredData() async {

@@ -1,47 +1,55 @@
 ```
-# Dependencies
+# Flutter/Dart specific
 .dart_tool/
-.build/
-dependencies/
+.packages
+pubspec.lock
+*.g.dart
+*.freezed.dart
+
+# Android
+android/.gradle
+android/build/
+android/app/build/
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace
+xcuserdata/
+
+# Dependencies
+**/node_modules/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/target/
+**/.gradle/
+**/build/
 
 # Logs
 *.log
-**/logs
+**/logs/
+**/log/
 
 # Environment variables
 .env
 .env.local
 .env.*
+!.env.example
 
 # IDE files
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
+*.tmp
 
 # OS generated files
 .DS_Store
 Thumbs.db
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Build outputs
-build/
-dist/
-target/
-
-# Python related (if any Python files exist in project)
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache/
-.mypy_cache/
-
-# Temporary files
-*.tmp
-*.temp
+ehthumbs.db
+Icon?
 ```

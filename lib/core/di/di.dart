@@ -5,6 +5,7 @@ import '../../data/sync/drive_key_manager.dart';
 import '../../data/tracking/usage_stats_service.dart';
 import '../../data/tracking/event_aggregator.dart';
 import '../../core/platform/screen_state_listener.dart';
+import '../../core/services/background_task_manager.dart';
 
 /// Dependency Injection setup menggunakan GetIt
 final sl = GetIt.instance;
@@ -35,6 +36,9 @@ Future<void> initDependencies() async {
       screenListener: sl<ScreenStateListener>(),
     ),
   );
+
+  // Background Task Manager
+  sl.registerLazySingleton(() => BackgroundTaskInitializer());
 
   // Initialize database
   await sl<DatabaseService>().init();

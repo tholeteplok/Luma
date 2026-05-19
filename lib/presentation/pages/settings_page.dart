@@ -22,19 +22,20 @@ class SettingsPage extends StatelessWidget {
     // Consumer agar rebuild otomatis saat state berubah
     return Consumer2<SettingsNotifier, ThemeNotifier>(
       builder: (context, settings, theme, _) {
+        final p = context.luma;
         final isId = settings.languageCode == 'id';
 
         return Scaffold(
-          backgroundColor: AppColors.bgBase,
+          backgroundColor: p.bgBase,
           appBar: AppBar(
-            backgroundColor: AppColors.bgBase,
+            backgroundColor: p.bgBase,
             elevation: 0,
             scrolledUnderElevation: 0,
             automaticallyImplyLeading: showBackButton,
             leading: showBackButton
                 ? IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-                    color: AppColors.textSecondary,
+                    color: p.textSecondary,
                     onPressed: () => Navigator.pop(context),
                   )
                 : null,
@@ -43,7 +44,7 @@ class SettingsPage extends StatelessWidget {
               style: GoogleFonts.dmSans(
                 fontSize: 17,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+                color: p.textPrimary,
               ),
             ),
             centerTitle: true,
@@ -58,7 +59,12 @@ class SettingsPage extends StatelessWidget {
                   _ThemeTile(
                     label: isId ? 'Mode Tema' : 'Theme Mode',
                     currentMode: theme.themeMode,
-                    onChanged: (mode) => theme.setThemeMode(mode),
+                    onChanged: (mode) {
+                      // Update keduanya: ThemeNotifier (live MaterialApp)
+                      // + SettingsNotifier (untuk persist ke Isar/backup).
+                      theme.setThemeMode(mode);
+                      settings.setThemeMode(mode);
+                    },
                   ),
                 ],
               ),
@@ -140,7 +146,7 @@ class SettingsPage extends StatelessWidget {
                   'Luma v1.0.0',
                   style: GoogleFonts.dmSans(
                     fontSize: 12,
-                    color: AppColors.textSubtle,
+                    color: p.textSubtle,
                   ),
                 ),
               ),
@@ -150,7 +156,7 @@ class SettingsPage extends StatelessWidget {
                   'Personal Digital Behavior Intelligence',
                   style: GoogleFonts.dmSans(
                     fontSize: 11,
-                    color: AppColors.textSubtle,
+                    color: p.textSubtle,
                   ),
                 ),
               ),
@@ -188,6 +194,7 @@ class _BackupSectionState extends State<_BackupSection> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     final s = widget.settings;
     return _SettingsCard(
       children: [
@@ -201,7 +208,7 @@ class _BackupSectionState extends State<_BackupSection> {
             style: GoogleFonts.cormorantGaramond(
               fontSize: 16,
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
               height: 1.7,
             ),
           ),
@@ -214,13 +221,13 @@ class _BackupSectionState extends State<_BackupSection> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Row(
             children: [
-              const Icon(Icons.history, size: 14, color: AppColors.textSubtle),
+              Icon(Icons.history, size: 14, color: p.textSubtle),
               const SizedBox(width: 6),
               Text(
                 _formatBackupDate(s.lastBackupDate),
                 style: GoogleFonts.dmSans(
                   fontSize: 12,
-                  color: AppColors.textSubtle,
+                  color: p.textSubtle,
                 ),
               ),
             ],
@@ -248,7 +255,7 @@ class _BackupSectionState extends State<_BackupSection> {
                                 (widget.isId
                                     ? 'Backup gagal'
                                     : 'Backup failed')),
-                            backgroundColor: AppColors.bgElevated,
+                            backgroundColor: p.bgElevated,
                           ),
                         );
                       }
@@ -297,68 +304,72 @@ class _BackupSectionState extends State<_BackupSection> {
   ) async {
     // Capture sebelum semua async gap
     final messenger = ScaffoldMessenger.of(context);
+    final p = context.luma;
 
     final confirm = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: p.bgSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.isId ? 'Pulihkan dari Cadangan?' : 'Restore from Backup?',
-              style: GoogleFonts.dmSans(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              widget.isId
-                  ? 'Ini akan mengganti data saat ini.\n\nCadangan: ${DateFormat('dd MMMM yyyy').format(s.lastBackupDate!)}'
-                  : 'This will replace current data.\n\nBackup: ${DateFormat('MMMM d, yyyy').format(s.lastBackupDate!)}',
-              style: GoogleFonts.dmSans(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.borderSubtle),
-                      foregroundColor: AppColors.textSecondary,
-                    ),
-                    child: Text(widget.isId ? 'Batal' : 'Cancel'),
-                  ),
+      builder: (ctx) {
+        final pp = ctx.luma;
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.isId ? 'Pulihkan dari Cadangan?' : 'Restore from Backup?',
+                style: GoogleFonts.dmSans(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: pp.textPrimary,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentMuted,
-                      foregroundColor: AppColors.accentLight,
-                    ),
-                    child: Text(widget.isId ? 'Pulihkan' : 'Restore'),
-                  ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                widget.isId
+                    ? 'Ini akan mengganti data saat ini.\n\nCadangan: ${DateFormat('dd MMMM yyyy').format(s.lastBackupDate!)}'
+                    : 'This will replace current data.\n\nBackup: ${DateFormat('MMMM d, yyyy').format(s.lastBackupDate!)}',
+                style: GoogleFonts.dmSans(
+                  fontSize: 14,
+                  color: pp.textSecondary,
+                  height: 1.6,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: pp.borderSubtle),
+                        foregroundColor: pp.textSecondary,
+                      ),
+                      child: Text(widget.isId ? 'Batal' : 'Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: pp.accentMuted,
+                        foregroundColor: pp.accentLight,
+                      ),
+                      child: Text(widget.isId ? 'Pulihkan' : 'Restore'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
 
     if (confirm == true && mounted) {
@@ -369,7 +380,7 @@ class _BackupSectionState extends State<_BackupSection> {
             content: Text(widget.isId
                 ? 'Pemulihan selesai'
                 : 'Restore complete'),
-            backgroundColor: AppColors.bgElevated,
+            backgroundColor: p.bgElevated,
           ),
         );
       }
@@ -387,6 +398,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, left: 2),
       child: Text(
@@ -395,7 +407,7 @@ class _SectionHeader extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.w500,
           letterSpacing: 1.2,
-          color: AppColors.textTertiary,
+          color: p.textTertiary,
         ),
       ),
     );
@@ -408,9 +420,10 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: p.bgSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -436,6 +449,7 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return SwitchListTile.adaptive(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
@@ -443,22 +457,22 @@ class _SwitchTile extends StatelessWidget {
         style: GoogleFonts.dmSans(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
+          color: p.textPrimary,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: GoogleFonts.dmSans(
           fontSize: 12,
-          color: AppColors.textTertiary,
+          color: p.textTertiary,
           height: 1.5,
         ),
       ),
       value: value,
       onChanged: onChanged,
-      activeTrackColor: AppColors.accentMuted,
-      activeThumbColor: AppColors.accentLight,
-      inactiveTrackColor: AppColors.bgElevated,
+      activeTrackColor: p.accentMuted,
+      activeThumbColor: p.accentLight,
+      inactiveTrackColor: p.bgElevated,
     );
   }
 }
@@ -476,6 +490,7 @@ class _TapTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
@@ -483,7 +498,7 @@ class _TapTile extends StatelessWidget {
         style: GoogleFonts.dmSans(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
+          color: p.textPrimary,
         ),
       ),
       trailing: Row(
@@ -493,14 +508,14 @@ class _TapTile extends StatelessWidget {
             value,
             style: GoogleFonts.dmSans(
               fontSize: 13,
-              color: AppColors.textTertiary,
+              color: p.textTertiary,
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(
+          Icon(
             Icons.chevron_right,
             size: 18,
-            color: AppColors.textSubtle,
+            color: p.textSubtle,
           ),
         ],
       ),
@@ -522,6 +537,7 @@ class _ThemeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
@@ -532,7 +548,7 @@ class _ThemeTile extends StatelessWidget {
             style: GoogleFonts.dmSans(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              color: p.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -581,16 +597,17 @@ class _ThemePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accentMuted : AppColors.bgElevated,
+          color: selected ? p.accentMuted : p.bgElevated,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? AppColors.accent : AppColors.borderFaint,
+            color: selected ? p.accent : p.borderFaint,
           ),
         ),
         child: Row(
@@ -599,7 +616,7 @@ class _ThemePill extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: selected ? AppColors.accentLight : AppColors.textTertiary,
+              color: selected ? p.accentLight : p.textTertiary,
             ),
             const SizedBox(width: 6),
             Text(
@@ -607,7 +624,7 @@ class _ThemePill extends StatelessWidget {
               style: GoogleFonts.dmSans(
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-                color: selected ? AppColors.accentLight : AppColors.textTertiary,
+                color: selected ? p.accentLight : p.textTertiary,
               ),
             ),
           ],
@@ -632,13 +649,14 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     final child = isLoading
-        ? const SizedBox(
+        ? SizedBox(
             width: 16,
             height: 16,
             child: CircularProgressIndicator(
               strokeWidth: 1.5,
-              color: AppColors.accentLight,
+              color: p.accentLight,
             ),
           )
         : Text(label);
@@ -647,8 +665,8 @@ class _ActionButton extends StatelessWidget {
       return ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accentMuted,
-          foregroundColor: AppColors.accentLight,
+          backgroundColor: p.accentMuted,
+          foregroundColor: p.accentLight,
           padding: const EdgeInsets.symmetric(vertical: 14),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -659,8 +677,8 @@ class _ActionButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textSecondary,
-        side: const BorderSide(color: AppColors.borderSubtle),
+        foregroundColor: p.textSecondary,
+        side: BorderSide(color: p.borderSubtle),
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -672,6 +690,7 @@ class _ActionButton extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(height: 1, color: AppColors.borderFaint);
+    final p = context.luma;
+    return Container(height: 1, color: p.borderFaint);
   }
 }

@@ -12,8 +12,8 @@ import '../../core/themes/colors.dart';
 
 /// Home page — Cermin ritme Luma
 ///
-/// Tidak ada angka. Tidak ada penilaian.
-/// Hanya refleksi tenang dari pola yang sudah ada.
+/// Layout (dari atas ke bawah):
+///   Header → Orb (50% layar) → Insight → Timeline ringkasan
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -22,7 +22,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  /// Apakah panel "insight sebelumnya" sedang dibuka di mode silent
   bool _showHistory = false;
 
   @override
@@ -33,8 +32,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// Mapping mood orb berdasarkan state.
-  /// Saat silent, orb pindah ke mood `gentle` — Luma hadir tanpa berkata.
   AmbientMood _orbMood(HomeNotifier homeState) {
     if (homeState.isSilent) return AmbientMood.gentle;
     if (homeState.insights.isEmpty) return AmbientMood.rest;
@@ -44,18 +41,17 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Scaffold(
-      backgroundColor: AppColors.bgBase,
+      backgroundColor: p.bgBase,
       body: Consumer3<HomeNotifier, ThemeNotifier, SettingsNotifier>(
         builder: (context, homeState, themeState, settingsState, child) {
           return CustomScrollView(
             slivers: [
-              // ── Custom Header ──────────────────────────────────────
-              const SliverToBoxAdapter(
-                child: LumaAppHeader(),
-              ),
+              // ── Header ────────────────────────────────────────────
+              const SliverToBoxAdapter(child: LumaAppHeader()),
 
-              // ── Loading / Error State ──────────────────────────────
+              // ── Loading ───────────────────────────────────────────
               if (homeState.isLoading)
                 const SliverFillRemaining(
                   child: Center(
@@ -70,12 +66,20 @@ class _HomePageState extends State<HomePage> {
                   child: _buildErrorState(context, homeState),
                 )
               else ...[
-                // ── Ambient Orb Hero ───────────────────────────────
+                // ── Orb — 50% layar ───────────────────────────────
                 SliverToBoxAdapter(
-                  child: _buildAmbientSection(context, homeState),
+                  child: _buildOrbSection(context, homeState),
                 ),
 
-                // ── Weekly Timeline ────────────────────────────────
+                // ── Insight header ────────────────────────────────
+                SliverToBoxAdapter(
+                  child: _buildInsightHeader(context, homeState),
+                ),
+
+                // ── Insight list / silent / empty ─────────────────
+                ..._buildInsightSlivers(homeState, settingsState),
+
+                // ── Timeline ringkasan (di bawah insight) ─────────
                 SliverToBoxAdapter(
                   child: _buildTimelineSection(
                     context,
@@ -83,13 +87,6 @@ class _HomePageState extends State<HomePage> {
                     settingsState.reduceMotion,
                   ),
                 ),
-
-                // ── Insights ──────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: _buildInsightHeader(context, homeState),
-                ),
-
-                ..._buildInsightSlivers(homeState, settingsState),
 
                 const SliverToBoxAdapter(child: SizedBox(height: 40)),
               ],
@@ -100,10 +97,105 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Bangun bagian insight sesuai state:
-  /// - Silent + ada history → kartu hening + opsi "lihat insight sebelumnya"
-  /// - Silent tanpa history → empty state
-  /// - Bicara → list insight hari ini
+  // ── Orb: 50% tinggi layar ──────────────────────────────────────────────────
+  Widget _buildOrbSection(BuildContext context, HomeNotifier homeState) {
+    final screenH = MediaQuery.sizeOf(context).height;
+    final orbAreaH = screenH * 0.50;
+    // Orb sendiri 70% dari area agar ada ruang napas di tepi
+    final orbSize = orbAreaH * 0.70;
+
+    return SizedBox(
+      height: orbAreaH,
+      child: Center(
+        child: AmbientOrb(
+          mood: _orbMood(homeState),
+          size: orbSize,
+        ),
+      ),
+    );
+  }
+
+  // ── Timeline ringkasan ─────────────────────────────────────────────────────
+  Widget _buildTimelineSection(
+    BuildContext context,
+    HomeNotifier homeState,
+    bool reduceMotion,
+  ) {
+    final p = context.luma;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: p.bgSurface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MINGGU INI',
+            style: GoogleFonts.dmSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 1.2,
+              color: p.textTertiary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FadingLineChart(
+            weeklyData: homeState.weeklyData,
+            height: 60,
+            reduceMotion: reduceMotion,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Insight header ─────────────────────────────────────────────────────────
+  Widget _buildInsightHeader(BuildContext context, HomeNotifier homeState) {
+    final p = context.luma;
+    final showHistoryToggle =
+        homeState.isSilent && homeState.history.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Insight',
+            style: GoogleFonts.dmSans(
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+              color: p.textPrimary,
+            ),
+          ),
+          if (showHistoryToggle)
+            GestureDetector(
+              onTap: () => setState(() => _showHistory = !_showHistory),
+              child: Text(
+                _showHistory ? 'Sembunyikan' : 'Lihat insight sebelumnya',
+                style: GoogleFonts.dmSans(
+                  fontSize: 13,
+                  color: p.accent,
+                ),
+              ),
+            )
+          else
+            Text(
+              'Lihat Semua',
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                color: p.accent,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Insight slivers ────────────────────────────────────────────────────────
   List<Widget> _buildInsightSlivers(
     HomeNotifier homeState,
     SettingsNotifier settingsState,
@@ -111,16 +203,27 @@ class _HomePageState extends State<HomePage> {
     if (homeState.isSilent) {
       return [
         SliverToBoxAdapter(
-          child: _buildSilentCard(homeState, settingsState),
+          child: _buildSilentCard(settingsState),
         ),
         if (_showHistory && homeState.history.isNotEmpty)
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildHistoryInsightCard(
-                  homeState.history[index],
-                  index,
+                child: InsightCard(
+                  id: homeState.history[index]['id'] as String? ??
+                      index.toString(),
+                  title: homeState.history[index]['title'] as String? ?? '',
+                  message: homeState.history[index]['message'] as String? ?? '',
+                  severity:
+                      homeState.history[index]['severity'] as String? ?? 'info',
+                  timestamp:
+                      homeState.history[index]['timestamp'] is DateTime
+                          ? homeState.history[index]['timestamp'] as DateTime
+                          : DateTime.now(),
+                  isRead: true,
+                  onTap: () {},
+                  onDismiss: () {},
                 ),
               ),
               childCount: homeState.history.length,
@@ -131,9 +234,7 @@ class _HomePageState extends State<HomePage> {
 
     if (homeState.insights.isEmpty) {
       return [
-        SliverToBoxAdapter(
-          child: _buildEmptyInsight(context, settingsState),
-        ),
+        SliverToBoxAdapter(child: _buildEmptyInsight(settingsState)),
       ];
     }
 
@@ -164,128 +265,18 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  /// Ambient Orb section — hero visual tanpa angka
-  Widget _buildAmbientSection(BuildContext context, HomeNotifier homeState) {
-    return Container(
-      height: 160,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: AmbientOrb(
-        mood: _orbMood(homeState),
-        size: 140,
-      ),
-    );
-  }
-
-  /// Timeline section — "MINGGU INI" label + fading line chart
-  Widget _buildTimelineSection(
-    BuildContext context,
-    HomeNotifier homeState,
-    bool reduceMotion,
-  ) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'MINGGU INI',
-                style: GoogleFonts.dmSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                  color: AppColors.textTertiary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          FadingLineChart(
-            weeklyData: homeState.weeklyData,
-            height: 60,
-            reduceMotion: reduceMotion,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Insight section header — saat silent label + tombol berbeda
-  Widget _buildInsightHeader(BuildContext context, HomeNotifier homeState) {
-    final showHistoryToggle =
-        homeState.isSilent && homeState.history.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Insight',
-            style: GoogleFonts.dmSans(
-              fontSize: 17,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          if (showHistoryToggle)
-            GestureDetector(
-              onTap: () => setState(() => _showHistory = !_showHistory),
-              child: Text(
-                _showHistory
-                    ? 'Sembunyikan'
-                    : 'Lihat insight sebelumnya',
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.accent,
-                ),
-              ),
-            )
-          else
-            GestureDetector(
-              onTap: () {
-                // TODO: Navigate to all insights (full archive)
-              },
-              child: Text(
-                'Lihat Semua',
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.accent,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// Kartu silent — Luma hadir tanpa berkata
-  Widget _buildSilentCard(
-    HomeNotifier homeState,
-    SettingsNotifier settingsState,
-  ) {
+  // ── Silent card ────────────────────────────────────────────────────────────
+  Widget _buildSilentCard(SettingsNotifier settingsState) {
+    final p = context.luma;
     final isId = settingsState.languageCode == 'id';
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: p.bgSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border(
-          left: BorderSide(
-            width: 2,
-            color: AppColors.gentleInd.withValues(alpha: 0.5),
-          ),
+          left: BorderSide(width: 2, color: p.gentleInd.withValues(alpha: 0.5)),
         ),
       ),
       child: Column(
@@ -298,7 +289,7 @@ class _HomePageState extends State<HomePage> {
             style: GoogleFonts.cormorantGaramond(
               fontSize: 19,
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
               height: 1.6,
             ),
           ),
@@ -306,10 +297,10 @@ class _HomePageState extends State<HomePage> {
           Text(
             isId
                 ? 'Tidak setiap hari perlu diberi nama.'
-                : "Not every day needs to be named.",
+                : 'Not every day needs to be named.',
             style: GoogleFonts.dmSans(
               fontSize: 12,
-              color: AppColors.textSubtle,
+              color: p.textSubtle,
               height: 1.6,
             ),
           ),
@@ -318,33 +309,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Insight card untuk history — tampilan ringkas, tanpa "BARU SAJA"
-  Widget _buildHistoryInsightCard(Map<String, dynamic> item, int index) {
-    return InsightCard(
-      id: item['id'] as String? ?? index.toString(),
-      title: item['title'] as String? ?? '',
-      message: item['message'] as String? ?? '',
-      severity: item['severity'] as String? ?? 'info',
-      timestamp: item['timestamp'] is DateTime
-          ? item['timestamp'] as DateTime
-          : DateTime.now(),
-      isRead: true, // history selalu dianggap sudah dibaca
-      onTap: () {},
-      onDismiss: () {},
-    );
-  }
-
-  /// Empty state — hari pertama atau memang tidak ada data
-  Widget _buildEmptyInsight(
-    BuildContext context,
-    SettingsNotifier settingsState,
-  ) {
+  // ── Empty insight ──────────────────────────────────────────────────────────
+  Widget _buildEmptyInsight(SettingsNotifier settingsState) {
+    final p = context.luma;
     final isId = settingsState.languageCode == 'id';
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: p.bgSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -357,7 +330,7 @@ class _HomePageState extends State<HomePage> {
             style: GoogleFonts.cormorantGaramond(
               fontSize: 18,
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
               height: 1.6,
             ),
           ),
@@ -369,7 +342,7 @@ class _HomePageState extends State<HomePage> {
             textAlign: TextAlign.center,
             style: GoogleFonts.dmSans(
               fontSize: 12,
-              color: AppColors.textSubtle,
+              color: p.textSubtle,
               height: 1.6,
             ),
           ),
@@ -378,8 +351,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Error state — minimal, tidak dramatis
+  // ── Error state ────────────────────────────────────────────────────────────
   Widget _buildErrorState(BuildContext context, HomeNotifier homeState) {
+    final p = context.luma;
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -390,7 +364,7 @@ class _HomePageState extends State<HomePage> {
             style: GoogleFonts.cormorantGaramond(
               fontSize: 20,
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -400,14 +374,14 @@ class _HomePageState extends State<HomePage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: p.borderSubtle),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'Coba lagi',
                 style: GoogleFonts.dmSans(
                   fontSize: 14,
-                  color: AppColors.textSecondary,
+                  color: p.textSecondary,
                 ),
               ),
             ),

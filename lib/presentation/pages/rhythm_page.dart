@@ -11,19 +11,15 @@ import '../painters/fading_line_painter.dart';
 import '../widgets/insight_card.dart';
 import '../widgets/luma_app_header.dart';
 
-/// RhythmPage — Halaman ritme & detail.
-///
-/// Berisi:
-/// - Timeline mingguan (FadingLineChart) versi lebih besar
-/// - Konteks observasi Luma minggu ini (dimensi & kedalaman)
-/// - Riwayat insight dari InsightMemory (read-only)
+/// RhythmPage — Timeline detail + riwayat insight.
 class RhythmPage extends StatelessWidget {
   const RhythmPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Scaffold(
-      backgroundColor: AppColors.bgBase,
+      backgroundColor: p.bgBase,
       body: Consumer2<HomeNotifier, SettingsNotifier>(
         builder: (context, home, settings, _) {
           final isId = settings.languageCode == 'id';
@@ -32,23 +28,19 @@ class RhythmPage extends StatelessWidget {
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: LumaAppHeader(
-                  title: isId ? 'Ritme' : 'Rhythm',
-                ),
+                child: LumaAppHeader(title: isId ? 'Ritme' : 'Rhythm'),
               ),
               SliverToBoxAdapter(
-                child: _buildTimelineCard(home, settings.reduceMotion),
+                child: _TimelineCard(home: home, reduceMotion: settings.reduceMotion),
               ),
               SliverToBoxAdapter(
-                child: _buildContextCard(home, isId),
+                child: _ContextCard(home: home, isId: isId),
               ),
               SliverToBoxAdapter(
-                child: _buildHistoryHeader(isId, history.length),
+                child: _HistoryHeader(isId: isId, count: history.length),
               ),
               if (history.isEmpty)
-                SliverToBoxAdapter(
-                  child: _buildEmptyHistory(isId),
-                )
+                SliverToBoxAdapter(child: _EmptyHistory(isId: isId))
               else
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
@@ -80,13 +72,23 @@ class RhythmPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildTimelineCard(HomeNotifier home, bool reduceMotion) {
+// ── Sub-widgets (theme-aware via context.luma) ─────────────────────────────
+
+class _TimelineCard extends StatelessWidget {
+  final HomeNotifier home;
+  final bool reduceMotion;
+  const _TimelineCard({required this.home, required this.reduceMotion});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.luma;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: p.bgSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -98,7 +100,7 @@ class RhythmPage extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
-              color: AppColors.textTertiary,
+              color: p.textTertiary,
             ),
           ),
           const SizedBox(height: 16),
@@ -111,13 +113,21 @@ class RhythmPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildContextCard(HomeNotifier home, bool isId) {
+class _ContextCard extends StatelessWidget {
+  final HomeNotifier home;
+  final bool isId;
+  const _ContextCard({required this.home, required this.isId});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.luma;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: p.bgSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -129,7 +139,7 @@ class RhythmPage extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
-              color: AppColors.textTertiary,
+              color: p.textTertiary,
             ),
           ),
           const SizedBox(height: 12),
@@ -138,7 +148,7 @@ class RhythmPage extends StatelessWidget {
             style: GoogleFonts.cormorantGaramond(
               fontSize: 18,
               fontStyle: FontStyle.italic,
-              color: AppColors.textPrimary,
+              color: p.textPrimary,
               height: 1.55,
             ),
           ),
@@ -147,7 +157,7 @@ class RhythmPage extends StatelessWidget {
             _depthPhrase(home.depth, isId),
             style: GoogleFonts.dmSans(
               fontSize: 12,
-              color: AppColors.textTertiary,
+              color: p.textTertiary,
               height: 1.6,
             ),
           ),
@@ -156,7 +166,45 @@ class RhythmPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryHeader(bool isId, int count) {
+  String _dimensionPhrase(InsightDimension d, bool isId) => switch (d) {
+        InsightDimension.morningRhythm => isId
+            ? 'Minggu ini, Luma lebih memperhatikan ritme pagimu.'
+            : 'This week, Luma is paying closer attention to your morning rhythm.',
+        InsightDimension.distractionFlow => isId
+            ? 'Minggu ini, Luma mengamati aliran perhatian dan distraksi.'
+            : 'This week, Luma is observing the flow of attention and distraction.',
+        InsightDimension.restPattern => isId
+            ? 'Minggu ini, Luma memperhatikan pola istirahat dan malammu.'
+            : 'This week, Luma is watching your rest and night patterns.',
+        InsightDimension.energyRecovery => isId
+            ? 'Minggu ini, Luma memperhatikan pemulihan energimu.'
+            : 'This week, Luma is attending to your energy recovery.',
+      };
+
+  String _depthPhrase(DepthLevel depth, bool isId) => switch (depth) {
+        DepthLevel.surface => isId
+            ? 'Masih hari-hari pertama — observasi ringan.'
+            : 'Still the early days — light observations.',
+        DepthLevel.pattern => isId
+            ? 'Pola mingguan mulai terbaca.'
+            : 'Weekly patterns are starting to emerge.',
+        DepthLevel.relationship => isId
+            ? 'Hubungan antar pola mulai terlihat.'
+            : 'Relationships between patterns are becoming visible.',
+        DepthLevel.longitudinal => isId
+            ? 'Ritme jangka panjangmu mulai terdengar.'
+            : 'Your long-term rhythm is becoming audible.',
+      };
+}
+
+class _HistoryHeader extends StatelessWidget {
+  final bool isId;
+  final int count;
+  const _HistoryHeader({required this.isId, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.luma;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Row(
@@ -167,41 +215,43 @@ class RhythmPage extends StatelessWidget {
             style: GoogleFonts.dmSans(
               fontSize: 17,
               fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              color: p.textPrimary,
             ),
           ),
           if (count > 0)
             Text(
               '$count',
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
-                color: AppColors.textTertiary,
-              ),
+              style: GoogleFonts.dmSans(fontSize: 13, color: p.textTertiary),
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildEmptyHistory(bool isId) {
+class _EmptyHistory extends StatelessWidget {
+  final bool isId;
+  const _EmptyHistory({required this.isId});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.luma;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: p.bgSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           Text(
-            isId
-                ? 'Belum ada catatan tersimpan.'
-                : 'No notes saved yet.',
+            isId ? 'Belum ada catatan tersimpan.' : 'No notes saved yet.',
             textAlign: TextAlign.center,
             style: GoogleFonts.cormorantGaramond(
               fontSize: 17,
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
               height: 1.6,
             ),
           ),
@@ -209,50 +259,16 @@ class RhythmPage extends StatelessWidget {
           Text(
             isId
                 ? 'Setiap kali Luma berkata sesuatu, ia akan tinggal di sini.'
-                : "Whenever Luma speaks, it will rest here.",
+                : 'Whenever Luma speaks, it will rest here.',
             textAlign: TextAlign.center,
             style: GoogleFonts.dmSans(
               fontSize: 12,
-              color: AppColors.textSubtle,
+              color: p.textSubtle,
               height: 1.6,
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _dimensionPhrase(InsightDimension d, bool isId) {
-    return switch (d) {
-      InsightDimension.morningRhythm => isId
-          ? 'Minggu ini, Luma lebih memperhatikan ritme pagimu.'
-          : "This week, Luma is paying closer attention to your morning rhythm.",
-      InsightDimension.distractionFlow => isId
-          ? 'Minggu ini, Luma mengamati aliran perhatian dan distraksi.'
-          : "This week, Luma is observing the flow of attention and distraction.",
-      InsightDimension.restPattern => isId
-          ? 'Minggu ini, Luma memperhatikan pola istirahat dan malammu.'
-          : "This week, Luma is watching your rest and night patterns.",
-      InsightDimension.energyRecovery => isId
-          ? 'Minggu ini, Luma memperhatikan pemulihan energimu.'
-          : "This week, Luma is attending to your energy recovery.",
-    };
-  }
-
-  String _depthPhrase(DepthLevel depth, bool isId) {
-    return switch (depth) {
-      DepthLevel.surface => isId
-          ? 'Masih hari-hari pertama — observasi ringan.'
-          : 'Still the early days — light observations.',
-      DepthLevel.pattern => isId
-          ? 'Pola mingguan mulai terbaca.'
-          : 'Weekly patterns are starting to emerge.',
-      DepthLevel.relationship => isId
-          ? 'Hubungan antar pola mulai terlihat.'
-          : 'Relationships between patterns are becoming visible.',
-      DepthLevel.longitudinal => isId
-          ? 'Ritme jangka panjangmu mulai terdengar.'
-          : 'Your long-term rhythm is becoming audible.',
-    };
   }
 }

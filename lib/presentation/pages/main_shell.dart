@@ -8,10 +8,8 @@ import 'home_page.dart';
 import 'rhythm_page.dart';
 import 'settings_page.dart';
 
-/// MainShell — Container utama aplikasi dengan bottom navigation.
-///
-/// Memakai [IndexedStack] supaya tiap tab mempertahankan state, scroll
-/// position, dan animasi orb tidak ter-reset saat user berpindah tab.
+/// MainShell — Container utama dengan bottom navigation.
+/// IndexedStack mempertahankan state & animasi tiap tab.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -30,15 +28,13 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     final settings = context.watch<SettingsNotifier>();
     final isId = settings.languageCode == 'id';
 
     return Scaffold(
-      backgroundColor: AppColors.bgBase,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _tabs,
-      ),
+      backgroundColor: p.bgBase,
+      body: IndexedStack(index: _currentIndex, children: _tabs),
       bottomNavigationBar: _LumaNavBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
@@ -50,7 +46,6 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-/// Custom bottom nav — minimal, tanpa elevation, sesuai bahasa visual Luma.
 class _LumaNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -70,15 +65,11 @@ class _LumaNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgBase,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.borderFaint,
-            width: 0.5,
-          ),
-        ),
+        color: p.bgBase,
+        border: Border(top: BorderSide(color: p.borderFaint, width: 0.5)),
       ),
       child: SafeArea(
         top: false,
@@ -102,9 +93,7 @@ class _LumaNavBar extends StatelessWidget {
                           selected ? filled : outlined,
                           key: ValueKey(selected),
                           size: 22,
-                          color: selected
-                              ? AppColors.textPrimary
-                              : AppColors.textSubtle,
+                          color: selected ? p.textPrimary : p.textSubtle,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -112,11 +101,10 @@ class _LumaNavBar extends StatelessWidget {
                         labels[i],
                         style: GoogleFonts.dmSans(
                           fontSize: 11,
-                          fontWeight:
-                              selected ? FontWeight.w500 : FontWeight.w400,
-                          color: selected
-                              ? AppColors.textPrimary
-                              : AppColors.textSubtle,
+                          fontWeight: selected
+                              ? FontWeight.w500
+                              : FontWeight.w400,
+                          color: selected ? p.textPrimary : p.textSubtle,
                         ),
                       ),
                     ],

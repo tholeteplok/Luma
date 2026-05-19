@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../core/themes/app_theme.dart';
+import '../presentation/bloc/theme_bloc.dart';
 import '../presentation/pages/onboarding_page.dart';
 import '../presentation/pages/main_shell.dart';
 
-/// Main app widget dengan routing dan theme support
+/// Main app widget dengan routing dan theme support.
+///
+/// Tema reaktif terhadap [ThemeNotifier]: toggle di Settings akan langsung
+/// memperbarui MaterialApp tanpa restart.
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
@@ -22,7 +28,6 @@ class _MainAppState extends State<MainApp> {
 
   Future<void> _checkOnboardingStatus() async {
     // TODO: Check from SharedPreferences or AppPreferences
-    // For now, default to false to show onboarding
     setState(() {
       _hasCompletedOnboarding = false;
     });
@@ -37,12 +42,14 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeNotifier>();
+
     return MaterialApp(
       title: 'Luma',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark, // Default ke dark mode
+      themeMode: theme.themeMode,
       home: _hasCompletedOnboarding
           ? const MainShell()
           : OnboardingPage(onComplete: _onOnboardingComplete),

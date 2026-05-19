@@ -3,35 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/themes/colors.dart';
 
-/// LumaAppHeader — Header terpusat untuk semua screen Luma
-///
-/// Layout:
-/// ```
-/// Luma                          ⚙  (gear opsional)
-/// Sabtu, 16 Mei
-/// ```
-///
-/// Tidak menggunakan AppBar Material agar bisa fully custom.
-/// Gunakan widget ini di dalam Column/CustomScrollView.
+/// LumaAppHeader — Header terpusat untuk semua screen Luma.
+/// Theme-aware via `context.luma`.
 class LumaAppHeader extends StatelessWidget {
-  /// Callback saat icon settings ditekan. Jika null, icon disembunyikan
-  /// (mis. saat settings sudah jadi tab tersendiri).
   final VoidCallback? onSettingsTap;
-
-  /// Override label kiri (default: "Luma").
   final String? title;
 
-  const LumaAppHeader({
-    super.key,
-    this.onSettingsTap,
-    this.title,
-  });
+  const LumaAppHeader({super.key, this.onSettingsTap, this.title});
 
   String _formatDate() {
     final now = DateTime.now();
-    final locale = 'id_ID';
     try {
-      return DateFormat('EEEE, d MMMM', locale).format(now);
+      return DateFormat('EEEE, d MMMM', 'id_ID').format(now);
     } catch (_) {
       return DateFormat('EEEE, d MMMM').format(now);
     }
@@ -39,6 +22,7 @@ class LumaAppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -49,36 +33,33 @@ class LumaAppHeader extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Logo Luma (atau judul tab)
                 Text(
                   title ?? 'Luma',
                   style: GoogleFonts.dmSans(
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    color: p.textPrimary,
                     letterSpacing: 0,
                   ),
                 ),
-                // Settings icon — hanya muncul jika callback diberikan
                 if (onSettingsTap != null)
                   GestureDetector(
                     onTap: onSettingsTap,
                     child: Icon(
                       Icons.settings_outlined,
                       size: 20,
-                      color: AppColors.textTertiary,
+                      color: p.textTertiary,
                     ),
                   ),
               ],
             ),
             const SizedBox(height: 2),
-            // Tanggal hari ini — orientasi waktu tanpa angka berlebihan
             Text(
               _formatDate(),
               style: GoogleFonts.dmSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: AppColors.textTertiary,
+                color: p.textTertiary,
               ),
             ),
           ],

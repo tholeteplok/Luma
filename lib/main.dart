@@ -19,7 +19,9 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => HomeNotifier()),
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
-        ChangeNotifierProvider(create: (_) => SettingsNotifier()),
+        ChangeNotifierProvider(
+          create: (_) => SettingsNotifier()..loadSettings(),
+        ),
       ],
       child: const MainApp(),
     ),

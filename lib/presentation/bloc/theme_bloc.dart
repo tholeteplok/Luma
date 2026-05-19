@@ -1,103 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Theme state untuk mengelola dark/light mode
-class ThemeState {
-  final bool isDarkMode;
-  final ThemeMode themeMode;
-
-  const ThemeState({
-    this.isDarkMode = true,
-    this.themeMode = ThemeMode.system,
-  });
-
-  ThemeState copyWith({
-    bool? isDarkMode,
-    ThemeMode? themeMode,
-  }) {
-    return ThemeState(
-      isDarkMode: isDarkMode ?? this.isDarkMode,
-      themeMode: themeMode ?? this.themeMode,
-    );
-  }
-
-  /// Toggle antara dark dan light mode
-  ThemeState toggle() {
-    return copyWith(
-      isDarkMode: !isDarkMode,
-      themeMode: isDarkMode ? ThemeMode.light : ThemeMode.dark,
-    );
-  }
-
-  /// Set ke system default
-  ThemeState setSystem() {
-    return copyWith(themeMode: ThemeMode.system);
-  }
-
-  /// Set ke dark mode
-  ThemeState setDark() {
-    return copyWith(
-      isDarkMode: true,
-      themeMode: ThemeMode.dark,
-    );
-  }
-
-  /// Set ke light mode
-  ThemeState setLight() {
-    return copyWith(
-      isDarkMode: false,
-      themeMode: ThemeMode.light,
-    );
-  }
-}
-
-/// Simple theme notifier (alternatif jika tidak menggunakan BLoC/Riverpod)
+/// ThemeNotifier — Sumber kebenaran tema aktif untuk MaterialApp.
+///
+/// Persisted via SharedPreferences di key `luma_theme_mode`.
+/// Disinkronkan dengan SettingsNotifier — toggle dari settings page
+/// akan memperbarui notifier ini juga.
 class ThemeNotifier extends ChangeNotifier {
-  ThemeState _state = const ThemeState(isDarkMode: true);
+  static const _prefsKey = 'luma_theme_mode';
 
-  ThemeState get state => _state;
-  bool get isDarkMode => _state.isDarkMode;
-  ThemeMode get themeMode => _state.themeMode;
+  ThemeMode _themeMode = ThemeMode.system;
+  bool _hydrated = false;
 
-  void toggle() {
-    _state = _state.toggle();
+  ThemeMode get themeMode => _themeMode;
+  bool get isDarkMode => _themeMode == ThemeMode.dark;
+
+  /// True ketika preferensi sudah dibaca dari disk.
+  /// Sebelum hydrated, MaterialApp boleh fallback ke system default.
+  bool get hydrated => _hydrated;
+
+  ThemeNotifier() {
+    _loadFromPrefs();
+  }
+
+  Future<void> _loadFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_prefsKey);
+      _themeMode = _parseThemeMode(stored) ?? ThemeMode.system;
+    } catch (_) {
+      _themeMode = ThemeMode.system;
+    }
+    _hydrated = true;
     notifyListeners();
   }
 
-  void setSystem() {
-    _state = _state.setSystem();
-    notifyListeners();
-  }
-
-  void setDark() {
-    _state = _state.setDark();
-    notifyListeners();
-  }
-
-  void setLight() {
-    _state = _state.setLight();
-    notifyListeners();
-  }
-
-  /// Set theme mode langsung dari ThemeMode enum
-  void setThemeMode(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.dark:
-        setDark();
-      case ThemeMode.light:
-        setLight();
-      case ThemeMode.system:
-        setSystem();
+  Future<void> _persist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, _themeMode.name);
+    } catch (_) {
+      // best-effort persist; jangan crash UI saat write gagal
     }
   }
 
-  /// Load dari preferences (akan diimplementasikan dengan SharedPreferences)
-  Future<void> loadFromPrefs() async {
-    // TODO: Implement dengan SharedPreferences
+  /// Set theme mode langsung
+  void setThemeMode(ThemeMode mode) {
+    if (_themeMode == mode) return;
+    _themeMode = mode;
     notifyListeners();
+    _persist();
   }
 
-  /// Save ke preferences
-  Future<void> saveToPrefs() async {
-    // TODO: Implement dengan SharedPreferences
+  /// Toggle dark ↔ light. Jika sebelumnya `system`, ikuti hasil resolved
+  /// (dark menjadi light, light menjadi dark).
+  void toggle() {
+    setThemeMode(_themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
+  }
+
+  void setDark()   => setThemeMode(ThemeMode.dark);
+  void setLight()  => setThemeMode(ThemeMode.light);
+  void setSystem() => setThemeMode(ThemeMode.system);
+
+  ThemeMode? _parseThemeMode(String? raw) {
+    switch (raw) {
+      case 'dark':
+        return ThemeMode.dark;
+      case 'light':
+        return ThemeMode.light;
+      case 'system':
+        return ThemeMode.system;
+      default:
+        return null;
+    }
   }
 }

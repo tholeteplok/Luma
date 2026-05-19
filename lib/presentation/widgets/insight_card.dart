@@ -4,20 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
 import '../../core/utils/fade_granularity.dart';
 
-/// InsightCard — Kartu insight dengan tone observasional
-///
-/// Anatomi (sesuai visual_prototype_dark.html):
-/// ```
-/// │▌  [BADGE TIPE]
-/// │   Teks insight utama dalam serif
-/// │   Sub-teks lembut dalam serif italic
-/// │   ───────────────────────────
-/// │   hint pasif bawah
-/// ```
-///
-/// Tidak ada angka nilai.
-/// Tidak ada tombol dismiss mencolok.
-/// Warna left bar hanya sebagai penanda tipe, bukan penilaian.
+/// InsightCard — Kartu insight dengan tone observasional.
+/// Sepenuhnya theme-aware via [LumaPalette] / `context.luma`.
 class InsightCard extends StatelessWidget {
   final String id;
   final String title;
@@ -40,58 +28,51 @@ class InsightCard extends StatelessWidget {
     this.onDismiss,
   });
 
-  /// Warna indicator bar kiri — sesuai prototype semantic colors
-  Color _indicatorColor() {
+  Color _indicatorColor(LumaPalette p) {
     switch (severity.toLowerCase()) {
       case 'critical':
       case 'warning':
-        return AppColors.warnInd;
+        return p.warnInd;
       case 'notice':
-        return AppColors.noticeInd;
+        return p.noticeInd;
       case 'gentle':
       case 'positive':
-        return AppColors.gentleInd;
-      case 'info':
+        return p.gentleInd;
       default:
-        return AppColors.infoInd;
+        return p.infoInd;
     }
   }
 
-  /// Warna teks badge — pasangan dari indicator
-  Color _badgeTextColor() {
+  Color _badgeTextColor(LumaPalette p) {
     switch (severity.toLowerCase()) {
       case 'critical':
       case 'warning':
-        return AppColors.warnText;
+        return p.warnText;
       case 'notice':
-        return AppColors.noticeText;
+        return p.noticeText;
       case 'gentle':
       case 'positive':
-        return AppColors.gentleText;
-      case 'info':
+        return p.gentleText;
       default:
-        return AppColors.infoText;
+        return p.infoText;
     }
   }
 
-  /// Background badge — sangat redup, tidak mencolok
-  Color _badgeBg() {
+  Color _badgeBg(LumaPalette p) {
     switch (severity.toLowerCase()) {
       case 'critical':
       case 'warning':
-        return const Color(0xFF1E1010);
+        return p.warnBadgeBg;
       case 'notice':
-        return const Color(0xFF1A1008);
+        return p.noticeBadgeBg;
       case 'gentle':
       case 'positive':
-        return const Color(0xFF101E1B);
-      case 'info':
+        return p.gentleBadgeBg;
       default:
-        return const Color(0xFF0E1420);
+        return p.infoBadgeBg;
     }
   }
 
-  /// Label badge — singkat, observasional, uppercase
   String _badgeLabel() {
     final timeStr = _relativeTimeShort();
     switch (severity.toLowerCase()) {
@@ -103,7 +84,6 @@ class InsightCard extends StatelessWidget {
       case 'gentle':
       case 'positive':
         return '$timeStr • POLA';
-      case 'info':
       default:
         return '$timeStr • INFO';
     }
@@ -119,10 +99,11 @@ class InsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     final daysOld = DateTime.now().difference(timestamp).inDays;
     final opacity = FadeGranularity.getOpacity(daysOld);
     final blurSigma = FadeGranularity.getBlurSigma(daysOld);
-    final indicatorColor = _indicatorColor();
+    final indicatorColor = _indicatorColor(p);
 
     return Opacity(
       opacity: isRead ? opacity * 0.7 : opacity,
@@ -132,7 +113,7 @@ class InsightCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.bgSurface,
+            color: p.bgSurface,
             borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
@@ -140,12 +121,9 @@ class InsightCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Left indicator bar (2px) ───────────────────────
-                Container(
-                  width: 2,
-                  color: indicatorColor,
-                ),
-                // ── Content ───────────────────────────────────────
+                // Left indicator bar
+                Container(width: 2, color: indicatorColor),
+                // Content
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
@@ -155,11 +133,9 @@ class InsightCard extends StatelessWidget {
                         // Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: _badgeBg(),
+                            color: _badgeBg(p),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -168,46 +144,40 @@ class InsightCard extends StatelessWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
                               letterSpacing: 0.6,
-                              color: _badgeTextColor(),
+                              color: _badgeTextColor(p),
                             ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // Insight title — Cormorant Garamond serif
+                        // Title
                         _buildText(
                           text: title,
                           fontSize: 20,
                           fontStyle: FontStyle.normal,
-                          color: AppColors.textPrimary,
+                          color: p.textPrimary,
                           blurSigma: blurSigma,
                           lineHeight: 1.5,
                         ),
                         if (message.isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          // Insight message — serif italic, tertiary
                           _buildText(
                             text: message,
                             fontSize: 15,
                             fontStyle: FontStyle.italic,
-                            color: AppColors.textTertiary,
+                            color: p.textTertiary,
                             blurSigma: blurSigma,
                             lineHeight: 1.65,
                           ),
                         ],
                         const SizedBox(height: 14),
-                        // Divider tipis
-                        Container(
-                          height: 1,
-                          color: AppColors.borderFaint,
-                        ),
+                        Container(height: 1, color: p.borderFaint),
                         const SizedBox(height: 10),
-                        // Footer hint — pasif, tidak mendesak
                         Text(
                           'Luma akan terus mengamati. '
                           'Pola biasanya muncul setelah beberapa hari.',
                           style: GoogleFonts.dmSans(
                             fontSize: 11,
-                            color: AppColors.textSubtle,
+                            color: p.textSubtle,
                             height: 1.6,
                           ),
                         ),
@@ -215,7 +185,7 @@ class InsightCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Unread dot — sangat subtle, di pojok kanan
+                // Unread dot
                 if (!isRead)
                   Padding(
                     padding: const EdgeInsets.only(top: 18, right: 14),
@@ -236,7 +206,6 @@ class InsightCard extends StatelessWidget {
     );
   }
 
-  /// Bangun teks dengan optional blur (FadeGranularity)
   Widget _buildText({
     required String text,
     required double fontSize,
@@ -245,7 +214,7 @@ class InsightCard extends StatelessWidget {
     required double blurSigma,
     double lineHeight = 1.5,
   }) {
-    Widget textWidget = Text(
+    Widget w = Text(
       text,
       style: GoogleFonts.cormorantGaramond(
         fontSize: fontSize,
@@ -254,18 +223,16 @@ class InsightCard extends StatelessWidget {
         height: lineHeight,
       ),
     );
-
     if (blurSigma > 0) {
-      textWidget = ImageFiltered(
+      w = ImageFiltered(
         imageFilter: dart_ui.ImageFilter.blur(
           sigmaX: blurSigma,
           sigmaY: blurSigma,
           tileMode: dart_ui.TileMode.decal,
         ),
-        child: textWidget,
+        child: w,
       );
     }
-
-    return textWidget;
+    return w;
   }
 }

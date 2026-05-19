@@ -100,9 +100,33 @@ dev_dependencies:
   freezed: ^2.4.1
   json_serializable: ^6.7.0
   mocktail: ^1.0.0
+  flutter_launcher_icons: ^0.14.1
 
 dependency_overrides:
   sign_in_with_apple: ^6.1.2
+
+# ─── App Launcher Icon ───────────────────────────────────────────────
+# Generate dengan: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icon/Luma_launcher.png"
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  adaptive_icon_background: "#0A0A0F"
+  adaptive_icon_foreground: "assets/icon/Luma_launcher.png"
+  windows:
+    generate: true
+    image_path: "assets/icon/Luma_launcher.png"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "assets/icon/Luma_launcher.png"
+  web:
+    generate: true
+    image_path: "assets/icon/Luma_launcher.png"
+    background_color: "#0A0A0F"
+    theme_color: "#0A0A0F"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -114,6 +138,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/icon/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

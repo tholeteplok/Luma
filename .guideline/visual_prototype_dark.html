@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luma — Design Prototype v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-base: #0C0C14;
+    --bg-surface: #12121E;
+    --bg-elevated: #191927;
+    --bg-subtle: #1E1E30;
+    --border-faint: #1F1F32;
+    --border-subtle: #2A2A42;
+    --border-medium: #363654;
+    --text-primary: #E8E8F2;
+    --text-secondary: #B4B4CC;
+    --text-tertiary: #7A7A96;
+    --text-subtle: #4A4A68;
+    --accent: #6B6BCA;
+    --accent-light: #8A8ADA;
+    --accent-muted: #3D3D7A;
+    --info-text: #7B9FD4;
+    --info-ind: #3A5A8A;
+    --notice-text: #C4944A;
+    --notice-ind: #7A5220;
+    --gentle-text: #6BA896;
+    --gentle-ind: #2E5A50;
+    --warn-text: #B87066;
+    --warn-ind: #6A3028;
+    --focus-color: #6B8FCA;
+    --distract-color: #8A6B8A;
+    --rest-color: #2A2A3E;
+  }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  .nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border-faint);
+    padding: 0 16px;
+    background: var(--bg-base);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding: 12px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { color: var(--text-secondary); }
+  .nav-btn.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .phone {
+    width: 320px;
+    min-height: 620px;
+    background: var(--bg-base);
+    border-radius: 32px;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .phone-inner {
+    padding: 20px 20px 24px;
+    height: 100%;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+  .status-time {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .status-icons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .status-dot {
+    width: 14px;
+    height: 7px;
+    border-radius: 1px;
+    border: 1px solid var(--text-tertiary);
+    position: relative;
+  }
+  .status-dot::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 1px; right: 3px; bottom: 1px;
+    background: var(--text-secondary);
+    border-radius: 0.5px;
+  }
+
+  .luma-logo {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .ambient-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 160px;
+    position: relative;
+    margin: 8px 0;
+  }
+  .amb-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent-muted);
+    animation: breathe 4s ease-in-out infinite;
+  }
+  .amb-circle:nth-child(1) { width: 120px; height: 120px; opacity: 0.15; filter: blur(20px); }
+  .amb-circle:nth-child(2) { width: 80px; height: 80px; opacity: 0.25; filter: blur(14px); animation-delay: 0.4s; }
+  .amb-circle:nth-child(3) { width: 40px; height: 40px; opacity: 0.4; filter: blur(8px); animation-delay: 0.8s; }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.04); opacity: 0.85; }
+  }
+
+  /* Ambient transition animation */
+  @keyframes ambientAwaken {
+    0% { transform: scale(1); opacity: 0.6; filter: blur(20px); }
+    50% { transform: scale(1.08); opacity: 0.9; filter: blur(8px); }
+    100% { transform: scale(1.04); opacity: 0.85; filter: blur(14px); }
+  }
+  .amb-circle.awakening {
+    animation: ambientAwaken 3s ease-in-out forwards;
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-indicator {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    border-radius: 0;
+  }
+
+  .card-inner { padding-left: 14px; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.6px;
+    margin-bottom: 14px;
+  }
+
+  .insight-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+  }
+
+  .insight-sub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border-faint);
+    margin-bottom: 16px;
+  }
+
+  .feedback-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+  }
+
+  .feedback-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .fb-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-tertiary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fb-btn:hover { border-color: var(--border-medium); color: var(--text-secondary); }
+  .fb-btn.selected {
+    background: var(--bg-subtle);
+    border-color: var(--accent-muted);
+    color: var(--text-primary);
+  }
+
+  .footer-hint {
+    font-size: 11px;
+    color: var(--text-subtle);
+    line-height: 1.6;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .date-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 24px;
+  }
+
+  /* ── ONBOARDING ── */
+  .ob-display {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 300;
+    line-height: 1.25;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+  }
+  .ob-sub {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    line-height: 1.65;
+    margin-bottom: 10px;
+  }
+  .ob-privacy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: #101E1B;
+    font-size: 11px;
+    color: var(--gentle-text);
+    margin-bottom: 20px;
+  }
+  .ob-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .ob-timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ob-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-muted); flex-shrink: 0; }
+  .ob-day { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-tertiary); width: 52px; }
+  .ob-desc { font-size: 12px; color: var(--text-secondary); }
+
+  .dots-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .prog-dot {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border-subtle);
+    transition: all 0.3s ease;
+  }
+  .prog-dot.active { width: 20px; background: var(--accent); }
+  .prog-dot.inactive { width: 6px; }
+
+  .ghost-btn {
+    width: 100%;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ghost-btn:hover { border-color: var(--border-medium); color: var(--text-primary); }
+  .ghost-btn:active { transform: scale(0.98); opacity: 0.72; }
+
+  /* Google Sign-In Button */
+  .google-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
+  }
+  .google-btn:hover { border-color: var(--border-medium); background: var(--bg-elevated); }
+  .google-btn:active { transform: scale(0.98); opacity: 0.85; }
+  .google-icon {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4285F4 0%, #34A853 50%, #FBBC05 75%, #EA4335 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .google-icon-inner {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+  }
+
+  /* ── WAITING ROOM ── */
+  .waiting-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text-subtle);
+    line-height: 1.7;
+    text-align: center;
+    margin-bottom: 24px;
+    transition: opacity 0.4s ease;
+  }
+  .waiting-dots {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .w-dot { width: 6px; height: 6px; border-radius: 50%; transition: all 0.3s ease; }
+  .w-dot.filled { background: var(--accent-muted); }
+  .w-dot.empty { background: var(--border-subtle); }
+  .w-dot.pulse {
+    animation: dotPulse 0.6s ease-out;
+  }
+  @keyframes dotPulse {
+    0% { transform: scale(1); background: var(--accent-muted); }
+    50% { transform: scale(2); background: var(--accent-light); }
+    100% { transform: scale(1); background: var(--accent-muted); }
+  }
+
+  /* Insight First Appearance Animation */
+  @keyframes insightReveal {
+    0% { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .insight-reveal {
+    animation: insightReveal 0.8s ease-out forwards;
+  }
+
+  /* ── TIMELINE ── */
+  .timeline-wrap {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 60px;
+    margin-bottom: 8px;
+  }
+  .t-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .t-col:hover { opacity: 0.7; }
+  .t-col.selected .t-bar { outline: 1px solid var(--accent-light); outline-offset: 1px; }
+  .t-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    transition: all 0.3s;
+  }
+  .t-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .t-label.today { color: var(--text-primary); font-weight: 500; }
+  .t-today-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 2px;
+  }
+
+  .detail-card {
+    background: var(--bg-subtle);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    border: 1px solid var(--border-faint);
+    transition: all 0.3s ease;
+  }
+  .detail-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+  .metric-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .metric-item {
+    flex: 1;
+    text-align: center;
+  }
+  .metric-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text-primary);
+    display: block;
+  }
+  .metric-lbl {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ── FULL TIMELINE PAGE ── */
+  .full-timeline-grid {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 4px 8px;
+    margin-bottom: 16px;
+  }
+  .tod-label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tod-bars {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    height: 20px;
+  }
+  .tod-bar {
+    flex: 1;
+    height: 100%;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .tod-bar:hover { opacity: 0.7; transform: scaleY(1.3); }
+  .tod-bar.selected { outline: 2px solid var(--accent-light); outline-offset: 2px; z-index: 2; }
+
+  .tooltip-popup {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-medium);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    z-index: 10;
+    animation: tooltipIn 0.2s ease-out;
+    pointer-events: none;
+  }
+  .tooltip-popup::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--border-medium);
+  }
+  @keyframes tooltipIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── GENTLE NUDGE ── */
+  .nudge-pulse {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gentle-text);
+    display: inline-block;
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+    vertical-align: middle;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .quiet-ack {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-subtle);
+    line-height: 1.6;
+    margin-top: 14px;
+    animation: fadeIn 1s ease 1s both;
+  }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+  /* ── NOTIFICATION ── */
+  .notif-preview {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-faint);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .notif-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--accent-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-light);
+  }
+  .notif-content { flex: 1; }
+  .notif-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+  .notif-body {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .notif-time {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .notif-bad {
+    opacity: 0.5;
+    position: relative;
+  }
+  .notif-bad::after {
+    content: '✕';
+    position: absolute;
+    top: 50%; right: 12px;
+    transform: translateY(-50%);
+    color: var(--warn-text);
+    font-size: 14px;
+  }
+  .rule-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .rule-good { background: #101E1B; color: var(--gentle-text); }
+  .rule-bad  { background: #1E1010; color: var(--warn-text); }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 0 4px;
+  }
+  .ctrl-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--accent-muted); color: var(--text-primary); }
+  .ctrl-btn.active { background: var(--accent-muted); border-color: var(--accent-muted); color: var(--accent-light); }
+
+  .spacer { height: 16px; }
+  .spacer-sm { height: 8px; }
+
+  .back-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    cursor: pointer;
+  }
+  .back-row:hover .back-label { color: var(--text-primary); }
+  .back-label { font-size: 14px; color: var(--text-secondary); }
+
+  .reflection-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 300;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .reflection-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 20px;
+  }
+  .reflection-body {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--text-primary);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .reflection-detail {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 14px;
+  }
+  .reflection-close {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-tertiary);
+    line-height: 1.7;
+  }
+
+  /* Sign-in success indicator */
+  .signin-success {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #101E1B;
+    border: 1px solid var(--gentle-ind);
+    color: var(--gentle-text);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    margin-top: 12px;
+    animation: fadeIn 0.5s ease;
+  }
+  .signin-success.visible { display: flex; }
+  .signin-check {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--gentle-ind);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--gentle-text);
+  }
+</style>
+</head>
+<body>
+
+<h2 class="sr-only">Luma app interactive design prototype v2 — dengan interaksi tambahan</h2>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showScreen('timeline')">Timeline</button>
+  <button class="nav-btn" onclick="showScreen('home')">Home</button>
+  <button class="nav-btn" onclick="showScreen('onboarding')">Onboarding</button>
+  <button class="nav-btn" onclick="showScreen('notification')">Notif</button>
+  <button class="nav-btn" onclick="showScreen('nudge')">Nudge</button>
+</nav>
+
+<div style="padding: 20px 16px;">
+
+<!-- ═══════ TIMELINE ═══════ -->
+<div id="screen-timeline" class="screen active">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">TINY TIMELINE — home screen</p>
+      <div class="phone" style="min-height: auto; width: 300px;">
+        <div class="phone-inner" style="padding: 16px;">
+          <div style="font-size: 10px; letter-spacing: 1px; color: var(--text-tertiary); margin-bottom: 8px; font-weight: 500;">MINGGU INI</div>
+          <div class="timeline-wrap" id="tiny-tl"></div>
+          <div style="display: flex; gap: 3px;" id="tiny-labels"></div>
+          <div id="tiny-detail"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">FULL TIMELINE — tap bar untuk detail</p>
+      <div class="phone" style="min-height: auto; width: 300px;">
+        <div class="phone-inner" style="padding: 16px;">
+          <div class="back-row" onclick="clearTooltip()">
+            <span class="back-label" style="font-size: 14px; color: var(--text-secondary);">← Timeline</span>
+          </div>
+          <div style="font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; color: var(--text-primary); margin-bottom: 4px;">Selasa, 12 Mei</div>
+          <div class="metric-row" style="margin-bottom: 16px;">
+            <div class="metric-item">
+              <span class="metric-val">3j 20m</span>
+              <span class="metric-lbl">Fokus</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val">1j 45m</span>
+              <span class="metric-lbl">Distraksi</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val">7j 10m</span>
+              <span class="metric-lbl">Tidur</span>
+            </div>
+          </div>
+          <div id="tooltip-container" style="position: relative;">
+            <div class="full-timeline-grid" id="full-tl-grid"></div>
+            <div id="tooltip-overlay"></div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-item"><div class="legend-dot" style="background: var(--focus-color)"></div>Fokus</div>
+            <div class="legend-item"><div class="legend-dot" style="background: var(--distract-color)"></div>Distraksi</div>
+            <div class="legend-item"><div class="legend-dot" style="background: var(--rest-color)"></div>Istirahat</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="reflection-close">"Selasa adalah hari paling fokusmu minggu ini."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ HOME ═══════ -->
+<div id="screen-home" class="screen">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">HOME — hari 3+</p>
+      <div class="phone" style="width: 300px;">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span class="status-time">09:14</span>
+            <div class="status-icons">
+              <div class="status-dot"></div>
+            </div>
+          </div>
+          <div class="header-row">
+            <span class="luma-logo">Luma</span>
+            <span style="font-size: 18px; color: var(--text-tertiary); cursor: pointer;">⚙</span>
+          </div>
+          <div class="date-label">Sabtu, 16 Mei</div>
+          <div class="ambient-wrap" style="height: 120px; margin-bottom: 20px;">
+            <div class="amb-circle" style="background: #4A6A9A;"></div>
+            <div class="amb-circle" style="background: #5A5A8A;"></div>
+            <div class="amb-circle" style="background: #6B6BCA;"></div>
+          </div>
+          <div class="card" id="home-insight-card">
+            <div class="card-indicator" id="home-indicator"></div>
+            <div class="card-inner" id="home-card-inner">
+              <div class="badge" id="home-badge"></div>
+              <div class="insight-text" id="home-text"></div>
+              <div class="insight-sub" id="home-sub"></div>
+              <div class="divider"></div>
+              <div class="feedback-label">Apakah ini terasa benar?</div>
+              <div class="feedback-row" id="home-fb-row"></div>
+              <div class="footer-hint">Luma akan terus mengamati. Cerita yang lebih panjang biasanya muncul setelah seminggu.</div>
+            </div>
+          </div>
+          <div class="spacer"></div>
+          <div class="section-label">MINGGU INI</div>
+          <div class="timeline-wrap" id="home-tl" style="height: 44px;"></div>
+          <div style="display: flex; gap: 3px;" id="home-labels"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">GANTI INSIGHT TYPE</p>
+      <div id="insight-switcher" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      <div class="spacer"></div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px;">FEEDBACK STATE</p>
+      <button class="ctrl-btn" onclick="triggerFeedback()">Simulasi: pilih feedback</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ ONBOARDING ═══════ -->
+<div id="screen-onboarding" class="screen">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start;">
+    <div id="ob-phone-wrap">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;" id="ob-screen-label">SCREEN 1 / 3</p>
+      <div class="phone" style="width: 300px; min-height: 580px;">
+        <div class="phone-inner" style="display: flex; flex-direction: column;">
+          <div class="status-bar">
+            <span class="status-time">09:00</span>
+            <div class="status-icons"><div class="status-dot"></div></div>
+          </div>
+          <div class="ambient-wrap" style="height: 140px;" id="ob-ambient">
+            <div class="amb-circle"></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="ob-display" id="ob-title"></div>
+          <div class="ob-sub" id="ob-sub"></div>
+          <div id="ob-extra"></div>
+          <div style="flex: 1;"></div>
+          <div class="dots-row" id="ob-dots"></div>
+          <button class="ghost-btn" id="ob-btn"></button>
+          <div class="signin-success" id="signin-success">
+            <div class="signin-check">✓</div>
+            <span>Terhubung sebagai luma.user@gmail.com</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">WAITING ROOM — transisi ke insight</p>
+      <div class="phone" style="width: 300px; min-height: 480px;">
+        <div class="phone-inner" style="display: flex; flex-direction: column; align-items: center;">
+          <div class="status-bar" style="width: 100%;">
+            <span class="status-time">08:47</span>
+            <div class="status-icons"><div class="status-dot"></div></div>
+          </div>
+          <div style="width: 100%; margin-bottom: 8px;"><span class="luma-logo">Luma</span></div>
+          <div class="spacer"></div>
+          <div class="ambient-wrap" style="height: 140px; width: 100%;" id="waiting-ambient">
+            <div class="amb-circle" style="opacity: 0.25;"></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="waiting-text" id="waiting-text">Mendengarkan ritmemu...</div>
+          <div class="waiting-dots" id="waiting-dots"></div>
+          <div style="flex: 1;"></div>
+          <div style="font-size: 10px; color: var(--text-subtle); text-align: center; margin-bottom: 8px;" id="waiting-day-label">Insight pertama datang hari ke-3</div>
+          <button class="ghost-btn" id="trigger-insight-btn" style="display: none; margin-top: 8px;" onclick="triggerFirstInsight()">✨ Lihat insight pertama</button>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn" id="wait-btn-1" onclick="setWaiting(1)">Hari 1</button>
+        <button class="ctrl-btn" id="wait-btn-2" onclick="setWaiting(2)">Hari 2</button>
+        <button class="ctrl-btn" id="wait-btn-3" onclick="setWaiting(3)">Hari 3 — Transisi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ NOTIFICATION ═══════ -->
+<div id="screen-notification" class="screen">
+  <div style="max-width: 460px; margin: 0 auto;">
+    <p style="font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.5px; margin-bottom: 16px;">NOTIFIKASI YANG BENAR</p>
+    <div id="good-notifs"></div>
+    <p style="font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.5px; margin: 20px 0 12px;">NOTIFIKASI YANG SALAH</p>
+    <div id="bad-notifs"></div>
+    <div style="margin-top: 20px; padding: 14px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-faint);">
+      <div style="font-size: 11px; font-weight: 500; color: var(--text-tertiary); letter-spacing: 0.8px; margin-bottom: 12px;">BUDGET MINGGUAN</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="notif-budget"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ NUDGE ═══════ -->
+<div id="screen-nudge" class="screen">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+    <div>
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; margin-bottom: 10px; letter-spacing: 0.5px;">GENTLE NUDGE — anomali terdeteksi</p>
+      <div class="phone" style="width: 300px; min-height: 500px;">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span class="status-time">14:23</span>
+            <div class="status-icons"><div class="status-dot"></div></div>
+          </div>
+          <div class="header-row">
+            <span class="luma-logo">Luma</span>
+            <span style="font-size: 18px; color: var(--text-tertiary); cursor: pointer;">⚙</span>
+          </div>
+          <div class="date-label">Kamis, 14 Mei</div>
+          <div class="ambient-wrap" style="height: 100px; margin-bottom: 20px;">
+            <div class="amb-circle" style="background: #2E5A50;"></div>
+            <div class="amb-circle" style="background: #3A6A60;"></div>
+          </div>
+          <div class="card" id="nudge-card">
+            <div class="card-indicator" style="background: var(--gentle-ind);"></div>
+            <div class="card-inner">
+              <div class="badge" style="background: #101E1B; color: var(--gentle-text);">
+                <span class="nudge-pulse" aria-hidden="true"></span>POLA BERUBAH
+              </div>
+              <div class="insight-text" id="nudge-text"></div>
+              <div class="quiet-ack" id="nudge-ack"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <p style="font-size: 11px; color: var(--text-tertiary); text-align: center; letter-spacing: 0.5px; margin-bottom: 4px;">PILIH SKENARIO</p>
+      <div id="nudge-switcher" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      <div class="spacer"></div>
+      <div style="padding: 14px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-faint); max-width: 200px;">
+        <div style="font-size: 10px; font-weight: 500; color: var(--text-tertiary); letter-spacing: 0.8px; margin-bottom: 10px;">BURNOUT SCORE</div>
+        <div id="burnout-meter" style="height: 6px; border-radius: 3px; background: var(--border-faint); margin-bottom: 6px; overflow: hidden;">
+          <div id="burnout-fill" style="height: 100%; border-radius: 3px; transition: width 0.6s ease;"></div>
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--text-primary);" id="burnout-val">68</div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 2px;">/ 100</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const days = ['Sen','Sel','Rab','Kam','Jum','Sab','Ahd'];
+const data = [
+  {q: 0.8, d: 0.2, s: 7.2, label: 'Sen', appSwitches: 45, focusSessions: 4},
+  {q: 0.9, d: 0.1, s: 7.5, label: 'Sel', appSwitches: 28, focusSessions: 5},
+  {q: 0.4, d: 0.6, s: 6.1, label: 'Rab', appSwitches: 72, focusSessions: 2},
+  {q: 0.7, d: 0.3, s: 6.8, label: 'Kam', appSwitches: 55, focusSessions: 3},
+  {q: 0.3, d: 0.7, s: 5.5, label: 'Jum', appSwitches: 88, focusSessions: 1},
+  {q: 0.85, d: 0.15, s: 8.0, label: 'Sab', appSwitches: 20, focusSessions: 6},
+  {q: 0.6, d: 0.4, s: 7.0, label: 'Ahd', appSwitches: 42, focusSessions: 3},
+];
+
+function getBarColor(q) {
+  if (q >= 0.7) return '#6B8FCA';
+  if (q >= 0.4) return '#3D3D7A';
+  return '#8A6B8A';
+}
+function getBarHeight(q, maxH) { return Math.max(8, Math.round(q * maxH)); }
+
+let selectedDay = 6;
+let selectedFullTimelineBar = null;
+
+function buildTinyTimeline(containerId, labelId, detailId, maxH, showLabels) {
+  const tl = document.getElementById(containerId);
+  const lb = document.getElementById(labelId);
+  if (!tl) return;
+  tl.innerHTML = '';
+  if (lb) lb.innerHTML = '';
+
+  data.forEach((d, i) => {
+    const col = document.createElement('div');
+    col.className = 't-col' + (i === selectedDay ? ' selected' : '');
+    col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;';
+    col.onclick = () => { selectedDay = i; refreshAll(); };
+
+    const bar = document.createElement('div');
+    bar.className = 't-bar';
+    const h = getBarHeight(d.q, maxH);
+    bar.style.cssText = `height:${h}px;background:${getBarColor(d.q)};width:100%;border-radius:3px 3px 0 0;border:${i===selectedDay?'1px solid #8A8ADA':'none'};`;
+    col.appendChild(bar);
+    tl.appendChild(col);
+
+    if (lb) {
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'flex:1;text-align:center;';
+      const isToday = i === 6;
+      lbl.innerHTML = `<div style="font-size:10px;color:${isToday?'var(--text-primary)':'var(--text-tertiary)'};font-weight:${isToday?500:400};font-family:'DM Sans',sans-serif;">${d.label}</div>${isToday?'<div style="width:4px;height:4px;border-radius:50%;background:var(--accent);margin:2px auto 0;"></div>':''}`;
+      lb.appendChild(lbl);
+    }
+  });
+
+  if (detailId) renderTinyDetail(detailId);
+}
+
+function renderTinyDetail(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const d = data[selectedDay];
+  el.innerHTML = `
+    <div class="detail-card">
+      <div class="detail-title">${days[selectedDay]}, ${10+selectedDay} Mei</div>
+      <div class="metric-row">
+        <div class="metric-item"><span class="metric-val">${Math.round(d.q * 5)}j ${Math.round(d.q*5*0.3*60/10)*10}m</span><span class="metric-lbl">Fokus</span></div>
+        <div class="metric-item"><span class="metric-val">${Math.round(d.d * 2)}j ${Math.round(d.d*20*3)}m</span><span class="metric-lbl">Distraksi</span></div>
+        <div class="metric-item"><span class="metric-val">${d.s.toFixed(1)}j</span><span class="metric-lbl">Tidur</span></div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-item"><span class="metric-val">${d.appSwitches}x</span><span class="metric-lbl">Switch App</span></div>
+        <div class="metric-item"><span class="metric-val">${d.focusSessions}</span><span class="metric-lbl">Sesi Fokus</span></div>
+      </div>
+    </div>`;
+}
+
+// ─── FULL TIMELINE DENGAN TOOLTIP INTERAKSI ───
+const fullTimelineDetail = [
+  // Pagi: jam 6-12
+  [
+    {hour: 6, val: 0.9, label: 'Fokus'},
+    {hour: 7, val: 0.8, label: 'Fokus'},
+    {hour: 8, val: 0.3, label: 'Distraksi'},
+    {hour: 9, val: 0.7, label: 'Fokus'},
+    {hour: 10, val: 0.2, label: 'Distraksi'},
+    {hour: 11, val: 0.9, label: 'Fokus'},
+    {hour: 12, val: 0.6, label: 'Fokus'},
+  ],
+  // Siang: jam 12-16
+  [
+    {hour: 12, val: 0.4, label: 'Distraksi'},
+    {hour: 13, val: 0.9, label: 'Fokus'},
+    {hour: 14, val: 0.5, label: 'Distraksi'},
+    {hour: 15, val: 0.8, label: 'Fokus'},
+    {hour: 16, val: 0.3, label: 'Distraksi'},
+    {hour: 17, val: 0.5, label: 'Distraksi'},
+    {hour: 18, val: 0.7, label: 'Fokus'},
+  ],
+  // Sore: jam 16-20
+  [
+    {hour: 16, val: 0.7, label: 'Fokus'},
+    {hour: 17, val: 0.6, label: 'Fokus'},
+    {hour: 18, val: 0.4, label: 'Distraksi'},
+    {hour: 19, val: 0.5, label: 'Distraksi'},
+    {hour: 20, val: 0.8, label: 'Fokus'},
+    {hour: 21, val: 0.4, label: 'Distraksi'},
+    {hour: 22, val: 0.3, label: 'Distraksi'},
+  ],
+  // Malam: jam 20-06
+  [
+    {hour: 22, val: 0.1, label: 'Istirahat'},
+    {hour: 23, val: 0.2, label: 'Istirahat'},
+    {hour: 0, val: 0.6, label: 'Distraksi'},
+    {hour: 1, val: 0.3, label: 'Distraksi'},
+    {hour: 2, val: 0.1, label: 'Istirahat'},
+    {hour: 3, val: 0.1, label: 'Istirahat'},
+    {hour: 4, val: 0.1, label: 'Istirahat'},
+  ],
+];
+
+function getColorForType(type) {
+  if (type === 'Fokus') return 'var(--focus-color)';
+  if (type === 'Distraksi') return 'var(--distract-color)';
+  return 'var(--rest-color)';
+}
+
+function getSessionDuration(hour) {
+  const durations = {
+    6: '45 menit', 7: '1j 20m', 8: '15 menit', 9: '55 menit', 10: '20 menit',
+    11: '2j 10m', 12: '30 menit', 13: '1j 45m', 14: '25 menit', 15: '40 menit',
+    16: '55 menit', 17: '35 menit', 18: '20 menit', 19: '30 menit', 20: '1j 10m',
+    21: '15 menit', 22: '8 menit', 23: '12 menit', 0: '25 menit', 1: '10 menit',
+    2: '5 menit', 3: '8 menit', 4: '6 menit'
+  };
+  return durations[hour] || '10 menit';
+}
+
+function buildFullTimeline() {
+  const grid = document.getElementById('full-tl-grid');
+  if (!grid) return;
+  const periods = [
+    {label:'Pagi', data: fullTimelineDetail[0]},
+    {label:'Siang', data: fullTimelineDetail[1]},
+    {label:'Sore', data: fullTimelineDetail[2]},
+    {label:'Malam', data: fullTimelineDetail[3]},
+  ];
+
+  grid.innerHTML = '';
+  periods.forEach((p, periodIdx) => {
+    const lbl = document.createElement('div');
+    lbl.className = 'tod-label';
+    lbl.textContent = p.label;
+    grid.appendChild(lbl);
+
+    const bars = document.createElement('div');
+    bars.className = 'tod-bars';
+    bars.style.position = 'relative';
+
+    p.data.forEach((d, barIdx) => {
+      const b = document.createElement('div');
+      b.className = 'tod-bar';
+      b.setAttribute('data-period', periodIdx);
+      b.setAttribute('data-bar', barIdx);
+      b.style.cssText = `flex:1;background:${getColorForType(d.label)};opacity:${0.4+d.val*0.6};height:${Math.max(4,Math.round(d.val*20))}px;border-radius:2px;cursor:pointer;`;
+      b.onclick = function(e) {
+        e.stopPropagation();
+        showTooltip(this, d);
+      };
+      bars.appendChild(b);
+    });
+    grid.appendChild(bars);
+  });
+}
+
+function showTooltip(element, data) {
+  clearTooltip();
+
+  element.classList.add('selected');
+  selectedFullTimelineBar = element;
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip-popup';
+  tooltip.id = 'active-tooltip';
+
+  const duration = getSessionDuration(data.hour);
+  const hourLabel = data.hour < 10 ? `0${data.hour}:00` : `${data.hour}:00`;
+  const appSwitches = Math.round(data.val * 15);
+
+  tooltip.innerHTML = `
+    <strong>${hourLabel}</strong> — ${data.label}<br>
+    <span style="color:var(--text-secondary);">Durasi: ${duration}</span><br>
+    <span style="color:var(--text-tertiary);">Switch app: ${appSwitches}x</span>
+  `;
+
+  element.parentElement.style.position = 'relative';
+  element.parentElement.appendChild(tooltip);
+}
+
+function clearTooltip() {
+  const existing = document.getElementById('active-tooltip');
+  if (existing) existing.remove();
+  if (selectedFullTimelineBar) {
+    selectedFullTimelineBar.classList.remove('selected');
+    selectedFullTimelineBar = null;
+  }
+}
+
+// ─── HOME SCREEN ───
+const insights = [
+  { type:'INFO', badge:'FOKUS', ind:'var(--info-ind)', badgeBg:'#151E2E', badgeTxt:'var(--info-text)',
+    text:'Pagi ini fokusmu tenang. Seperti Selasa lalu.', sub:'Sesi terlama hari ini: 2 jam 15 menit.' },
+  { type:'NOTICE', badge:'LATE NIGHT', ind:'var(--notice-ind)', badgeBg:'#2A1E10', badgeTxt:'var(--notice-text)',
+    text:'Malam tadi lebih panjang dari biasanya.', sub:'Screen aktif sampai pukul 01:24.' },
+  { type:'GENTLE', badge:'PERLU ISTIRAHAT', ind:'var(--gentle-ind)', badgeBg:'#101E1B', badgeTxt:'var(--gentle-text)',
+    text:'Tiga hari terakhir, sesi fokusmu lebih pendek dan sering terganggu.', sub:'Tidak apa-apa untuk beristirahat.' },
+  { type:'WARNING', badge:'DISTRAKSI', ind:'var(--warn-ind)', badgeBg:'#1E1010', badgeTxt:'var(--warn-text)',
+    text:'Jam 14:00. Kamu berpindah antar 6 aplikasi dalam 20 menit.', sub:null },
+];
+let currentInsight = 0;
+let feedbackDone = false;
+
+function renderHomeInsight() {
+  const ins = insights[currentInsight];
+  const ind = document.getElementById('home-indicator');
+  const badge = document.getElementById('home-badge');
+  const text = document.getElementById('home-text');
+  const sub = document.getElementById('home-sub');
+  const fbRow = document.getElementById('home-fb-row');
+  const cardInner = document.getElementById('home-card-inner');
+  if (!ind) return;
+  ind.style.background = ins.ind;
+  badge.style.cssText = `background:${ins.badgeBg};color:${ins.badgeTxt};display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:500;letter-spacing:0.6px;margin-bottom:14px;`;
+  badge.textContent = ins.badge;
+  text.textContent = ins.text;
+  sub.textContent = ins.sub || '';
+  sub.style.display = ins.sub ? '' : 'none';
+
+  // Animasi reveal
+  cardInner.classList.remove('insight-reveal');
+  void cardInner.offsetWidth;
+  cardInner.classList.add('insight-reveal');
+
+  if (feedbackDone) {
+    fbRow.innerHTML = '<div style="font-size:12px;color:var(--text-tertiary);font-style:italic;">Terima kasih. Luma akan terus mengamati.</div>';
+  } else {
+    fbRow.innerHTML = `
+      <button class="fb-btn" onclick="selectFb(this, true)">Ya, kurang lebih.</button>
+      <button class="fb-btn" onclick="selectFb(this, false)">Belum yakin.</button>`;
+  }
+}
+function selectFb(btn, val) {
+  feedbackDone = true;
+  const allBtns = document.querySelectorAll('#home-fb-row .fb-btn');
+  allBtns.forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  setTimeout(() => { renderHomeInsight(); }, 400);
+}
+function triggerFeedback() { feedbackDone = !feedbackDone; renderHomeInsight(); }
+
+function buildInsightSwitcher() {
+  const el = document.getElementById('insight-switcher');
+  if (!el) return;
+  el.innerHTML = '';
+  insights.forEach((ins, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ctrl-btn' + (i === currentInsight ? ' active' : '');
+    btn.textContent = ins.type + ' — ' + ins.badge;
+    btn.onclick = () => { currentInsight = i; feedbackDone = false; buildInsightSwitcher(); renderHomeInsight(); };
+    el.appendChild(btn);
+  });
+}
+
+// ─── ONBOARDING DENGAN GOOGLE SIGN-IN ───
+const obScreens = [
+  {
+    title:'Luma belum mengenal\nritmemu.',
+    sub:'Tidak ada form. Tidak ada target. Tidak ada pertanyaan yang harus dijawab.',
+    extra: null,
+    btn:'Lanjut',
+    circles: 1,
+  },
+  {
+    title:'Luma mengamati.\nBukan menghakimi.',
+    sub:'Semua data hanya ada di perangkatmu. Kami tidak bisa melihatnya.',
+    extra:'privacy',
+    btn:'Aku percaya.',
+    circles: 2,
+  },
+  {
+    title:'Kunci datamu dengan\nakun Google.',
+    sub:'Satu-satunya kunci. Kami tidak bisa membukanya — dan itu janji kami.',
+    extra:'google',
+    btn: null,
+    circles: 2,
+  },
+];
+let currentOb = 0;
+let signedIn = false;
+
+function renderOb() {
+  const s = obScreens[currentOb];
+  const title = document.getElementById('ob-title');
+  const sub = document.getElementById('ob-sub');
+  const extra = document.getElementById('ob-extra');
+  const btnContainer = document.getElementById('ob-btn').parentElement;
+  const btn = document.getElementById('ob-btn');
+  const dots = document.getElementById('ob-dots');
+  const label = document.getElementById('ob-screen-label');
+  const amb = document.getElementById('ob-ambient');
+  const signinSuccess = document.getElementById('signin-success');
+  if (!title) return;
+
+  title.textContent = s.title;
+  sub.textContent = s.sub;
+  label.textContent = `SCREEN ${currentOb+1} / 3`;
+
+  // Ambient circles
+  amb.innerHTML = '';
+  for (let i = 0; i < s.circles; i++) {
+    const c = document.createElement('div');
+    c.className = 'amb-circle';
+    amb.appendChild(c);
+  }
+
+  // Progress dots
+  dots.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const d = document.createElement('div');
+    d.className = 'prog-dot ' + (i === currentOb ? 'active' : 'inactive');
+    dots.appendChild(d);
+  }
+
+  // Extra content
+  extra.innerHTML = '';
+  if (s.extra === 'privacy') {
+    extra.innerHTML = `<div class="ob-privacy"><span style="font-size:12px;">🔒</span> Zero-knowledge encryption</div>`;
+  } else if (s.extra === 'google') {
+    extra.innerHTML = `
+      <div style="margin-bottom: 12px;">
+        <div class="ob-timeline">
+          <div class="ob-timeline-row"><div class="ob-dot"></div><div class="ob-day">Privasi</div><div class="ob-desc">Data terenkripsi sebelum disimpan</div></div>
+          <div class="ob-timeline-row"><div class="ob-dot"></div><div class="ob-day">Kunci</div><div class="ob-desc">Hanya akun Google-mu yang bisa membuka</div></div>
+          <div class="ob-timeline-row"><div class="ob-dot"></div><div class="ob-day">Janji</div><div class="ob-desc">Kami tidak bisa melihat data-mu</div></div>
+        </div>
+      </div>`;
+  }
+
+  // Button: ghost button for screen 1-2, Google Sign-In for screen 3
+  if (s.btn) {
+    btn.style.display = 'block';
+    btn.textContent = s.btn;
+    btn.onclick = () => { if (currentOb < 2) { currentOb++; renderOb(); } };
+
+    // Sembunyikan Google button dan signin success
+    const existingGoogle = document.getElementById('google-signin-btn');
+    if (existingGoogle) existingGoogle.style.display = 'none';
+    signinSuccess.classList.remove('visible');
+  } else {
+    // Screen 3: Google Sign-In
+    btn.style.display = 'none';
+
+    // Cek apakah tombol Google sudah ada
+    let googleBtn = document.getElementById('google-signin-btn');
+    if (!googleBtn) {
+      googleBtn = document.createElement('button');
+      googleBtn.id = 'google-signin-btn';
+      googleBtn.className = 'google-btn';
+      googleBtn.innerHTML = `
+        <div class="google-icon"><div class="google-icon-inner"></div></div>
+        <span>Lanjutkan dengan Google</span>`;
+      googleBtn.onclick = function() {
+        // Simulasi sign-in
+        signedIn = true;
+        this.style.display = 'none';
+        signinSuccess.classList.add('visible');
+        // Update tombol ghost untuk melanjutkan
+        btn.style.display = 'block';
+        btn.textContent = 'Masuk ke Luma';
+        btn.onclick = () => {
+          // Transisi ke waiting room
+          alert('Di aplikasi sungguhan: lanjut ke Waiting Room.\nEncryption key telah di-derive dari akun Google.');
+        };
+      };
+      btnContainer.appendChild(googleBtn);
+    } else {
+      googleBtn.style.display = 'block';
+    }
+    signinSuccess.classList.remove('visible');
+  }
+}
+
+// ─── WAITING ROOM DENGAN TRANSISI KE INSIGHT ───
+const waitingStates = [
+  { text:'Mendengarkan ritmemu...', filled:1, day: 1 },
+  { text:'Mengenali pagimu...', filled:2, day: 2 },
+  { text:'Hampir siap...', filled:3, day: 3, canTransition: true },
+];
+let currentWaitingDay = 1;
+
+function setWaiting(day) {
+  currentWaitingDay = day;
+  const s = waitingStates[day-1];
+  const textEl = document.getElementById('waiting-text');
+  const dots = document.getElementById('waiting-dots');
+  const dayLabel = document.getElementById('waiting-day-label');
+  const triggerBtn = document.getElementById('trigger-insight-btn');
+  const ambientWrap = document.getElementById('waiting-ambient');
+
+  if (!textEl) return;
+
+  // Fade out text
+  textEl.style.opacity = '0';
+
+  setTimeout(() => {
+    textEl.textContent = s.text;
+    textEl.style.opacity = '1';
+  }, 400);
+
+  // Update dots dengan animasi pulse
+  dots.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const d = document.createElement('div');
+    d.className = 'w-dot ' + (i < s.filled ? 'filled' : 'empty');
+    if (i === s.filled - 1 && day !== currentWaitingDay) {
+      d.classList.add('pulse');
+    }
+    dots.appendChild(d);
+  }
+
+  // Update day label
+  if (dayLabel) {
+    if (day === 3) {
+      dayLabel.textContent = 'Luma siap menyapamu.';
+      dayLabel.style.color = 'var(--text-secondary)';
+    } else {
+      dayLabel.textContent = `Insight pertama datang hari ke-3 (hari ke-${day} sekarang)`;
+      dayLabel.style.color = 'var(--text-subtle)';
+    }
+  }
+
+  // Tampilkan tombol transisi di hari ke-3
+  if (triggerBtn) {
+    if (day === 3) {
+      triggerBtn.style.display = 'block';
+    } else {
+      triggerBtn.style.display = 'none';
+    }
+  }
+
+  // Update button states
+  ['wait-btn-1','wait-btn-2','wait-btn-3'].forEach((id, i) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      if (i === day-1) btn.classList.add('active');
+      else btn.classList.remove('active');
+    }
+  });
+}
+
+function triggerFirstInsight() {
+  const ambientWrap = document.getElementById('waiting-ambient');
+  const textEl = document.getElementById('waiting-text');
+  const triggerBtn = document.getElementById('trigger-insight-btn');
+  const dayLabel = document.getElementById('waiting-day-label');
+
+  // Animasi ambient: awaken
+  if (ambientWrap) {
+    const circles = ambientWrap.querySelectorAll('.amb-circle');
+    circles.forEach(c => c.classList.add('awakening'));
+  }
+
+  // Ubah teks waiting room menjadi insight pertama
+  if (textEl) {
+    textEl.style.opacity = '0';
+    setTimeout(() => {
+      textEl.style.fontStyle = 'normal';
+      textEl.style.fontSize = '20px';
+      textEl.style.color = 'var(--text-primary)';
+      textEl.textContent = 'Pagi ini fokusmu tenang. Layar pertama biasanya menyala sekitar jam 7.';
+      textEl.style.opacity = '1';
+    }, 600);
+  }
+
+  // Sembunyikan tombol
+  if (triggerBtn) triggerBtn.style.display = 'none';
+
+  // Ubah label
+  if (dayLabel) {
+    dayLabel.textContent = 'Insight pertama — Hari ke-3';
+    dayLabel.style.color = 'var(--accent-light)';
+  }
+}
+
+// ─── NUDGE ───
+const nudgeScenarios = [
+  {
+    text:'Tiga hari terakhir, sesi fokusmu lebih pendek dan sering terganggu. Pola ini muncul saat beban kerja tinggi.',
+    ack:'Tidak ada yang perlu dilakukan sekarang.',
+    score: 68,
+  },
+  {
+    text:'Malam tadi terasa berbeda dari ritme biasamu. Layar menyala lebih dari satu jam setelah tengah malam.',
+    ack:'Luma hanya mencatat. Kamu yang mengetahui alasannya.',
+    score: 45,
+  },
+  {
+    text:'Seminggu ini kamu berpindah antar aplikasi lebih sering dari biasanya. Cascading pattern terdeteksi pada tiga sesi.',
+    ack:'Tidak ada yang perlu dilakukan sekarang.',
+    score: 55,
+  },
+];
+let currentNudge = 0;
+
+function renderNudge() {
+  const n = nudgeScenarios[currentNudge];
+  const el = document.getElementById('nudge-text');
+  const ack = document.getElementById('nudge-ack');
+  const fill = document.getElementById('burnout-fill');
+  const val = document.getElementById('burnout-val');
+  if (!el) return;
+  el.textContent = n.text;
+  ack.textContent = n.ack;
+  val.textContent = n.score;
+  const pct = n.score;
+  const color = pct >= 70 ? 'var(--warn-text)' : pct >= 50 ? 'var(--notice-text)' : 'var(--gentle-text)';
+  fill.style.cssText = `width:${pct}%;height:100%;border-radius:3px;background:${color};`;
+}
+
+function buildNudgeSwitcher() {
+  const el = document.getElementById('nudge-switcher');
+  if (!el) return;
+  el.innerHTML = '';
+  nudgeScenarios.forEach((n,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ctrl-btn' + (i === currentNudge ? ' active' : '');
+    const labels = ['Burnout ringan','Late night','Distraksi berulang'];
+    btn.textContent = labels[i];
+    btn.onclick = () => { currentNudge = i; buildNudgeSwitcher(); renderNudge(); };
+    el.appendChild(btn);
+  });
+}
+
+// ─── NOTIFICATION ───
+const goodNotifs = [
+  { time:'08:32', text:'Pola aktivitas malam meningkat tiga hari berturut-turut.' },
+  { time:'09:15', text:'Fokusmu paling stabil antara 08:00 dan 10:00 minggu ini.' },
+  { time:'14:07', text:'Kamis malam berbeda dari biasanya.' },
+  { time:'19:44', text:'Distraksi meningkat setelah pukul 21:00 kemarin.' },
+];
+const badNotifs = [
+  { time:'07:00', text:'Kamu kurang tidur! Segera istirahat sekarang!' },
+  { time:'11:30', text:'PERHATIAN: Burnout terdeteksi. Batasi screen time!' },
+  { time:'20:00', text:'Streak 3 hari fokus berturut-turut!' },
+];
+
+function buildNotifs() {
+  const goodEl = document.getElementById('good-notifs');
+  const badEl = document.getElementById('bad-notifs');
+  const budgetEl = document.getElementById('notif-budget');
+  if (!goodEl) return;
+
+  goodEl.innerHTML = '';
+  goodNotifs.forEach(n => {
+    goodEl.innerHTML += `
+      <div class="notif-preview">
+        <div class="notif-icon">L</div>
+        <div class="notif-content">
+          <div class="notif-title">Luma</div>
+          <div class="notif-body">${n.text}</div>
+        </div>
+        <div class="notif-time">${n.time}</div>
+      </div>`;
+  });
+
+  badEl.innerHTML = '';
+  badNotifs.forEach(n => {
+    badEl.innerHTML += `
+      <div class="notif-preview notif-bad" style="opacity:0.45;">
+        <div class="notif-icon" style="background:var(--warn-ind);">L</div>
+        <div class="notif-content">
+          <div class="notif-title">Luma</div>
+          <div class="notif-body">${n.text}</div>
+        </div>
+        <div class="notif-time">${n.time}</div>
+      </div>`;
+  });
+
+  budgetEl.innerHTML = '';
+  const labels = ['Anomali','Perubahan pola','Gentle nudge','Gentle nudge'];
+  const colors = ['var(--notice-text)','var(--info-text)','var(--gentle-text)','var(--gentle-text)'];
+  labels.forEach((l,i) => {
+    budgetEl.innerHTML += `<div style="padding:5px 10px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border-faint);font-size:11px;color:${colors[i]};">${l}</div>`;
+  });
+}
+
+// ─── GLOBAL ───
+function refreshAll() {
+  buildTinyTimeline('tiny-tl','tiny-labels','tiny-detail',44,true);
+  buildTinyTimeline('home-tl','home-labels',null,36,true);
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const screenEl = document.getElementById('screen-'+name);
+  if (screenEl) screenEl.classList.add('active');
+  if (event && event.target) event.target.classList.add('active');
+}
+
+// ─── INIT ───
+refreshAll();
+buildFullTimeline();
+renderHomeInsight();
+buildInsightSwitcher();
+renderOb();
+setWaiting(1);
+buildNotifs();
+renderNudge();
+buildNudgeSwitcher();
+
+// Global click untuk clear tooltip
+document.addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tod-bar')) {
+    clearTooltip();
+  }
+});
+</script>
+</body>
+</html>

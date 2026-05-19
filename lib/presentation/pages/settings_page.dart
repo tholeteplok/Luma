@@ -11,7 +11,11 @@ import '../bloc/theme_bloc.dart';
 /// Langsung consume SettingsNotifier dan ThemeNotifier via Provider.
 /// Tidak ada prop-drilling callback — semua toggle real-time dan persist.
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+  /// Saat false, AppBar tidak menampilkan tombol kembali.
+  /// Dipakai ketika halaman ini berada di dalam BottomNav (root tab).
+  final bool showBackButton;
+
+  const SettingsPage({super.key, this.showBackButton = true});
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +30,14 @@ class SettingsPage extends StatelessWidget {
             backgroundColor: AppColors.bgBase,
             elevation: 0,
             scrolledUnderElevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              color: AppColors.textSecondary,
-              onPressed: () => Navigator.pop(context),
-            ),
+            automaticallyImplyLeading: showBackButton,
+            leading: showBackButton
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                    color: AppColors.textSecondary,
+                    onPressed: () => Navigator.pop(context),
+                  )
+                : null,
             title: Text(
               isId ? 'Pengaturan' : 'Settings',
               style: GoogleFonts.dmSans(

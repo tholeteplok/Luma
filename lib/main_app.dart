@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/themes/app_theme.dart';
 import '../presentation/pages/onboarding_page.dart';
-import '../presentation/pages/home_page.dart';
+import '../presentation/pages/main_shell.dart';
 
 /// Main app widget dengan routing dan theme support
 class MainApp extends StatefulWidget {
@@ -44,7 +44,7 @@ class _MainAppState extends State<MainApp> {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark, // Default ke dark mode
       home: _hasCompletedOnboarding
-          ? const HomePage()
+          ? const MainShell()
           : OnboardingPage(onComplete: _onOnboardingComplete),
     );
   }

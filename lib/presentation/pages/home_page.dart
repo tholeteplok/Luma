@@ -9,7 +9,6 @@ import '../widgets/insight_card.dart';
 import '../widgets/luma_app_header.dart';
 import '../painters/fading_line_painter.dart';
 import '../../core/themes/colors.dart';
-import 'settings_page.dart';
 
 /// Home page — Cermin ritme Luma
 ///
@@ -52,10 +51,8 @@ class _HomePageState extends State<HomePage> {
           return CustomScrollView(
             slivers: [
               // ── Custom Header ──────────────────────────────────────
-              SliverToBoxAdapter(
-                child: LumaAppHeader(
-                  onSettingsTap: () => _navigateToSettings(settingsState),
-                ),
+              const SliverToBoxAdapter(
+                child: LumaAppHeader(),
               ),
 
               // ── Loading / Error State ──────────────────────────────
@@ -416,15 +413,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _navigateToSettings(SettingsNotifier settingsBloc) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
       ),
     );
   }

@@ -1,46 +1,4 @@
 ```
-# Flutter/Dart
-.dart_tool/
-.build/
-pubspec.lock
-*.g.dart
-*.freezed.dart
-
-# Dependencies
-vendor/
-.packages
-
-# Logs
-*.log
-**/logs
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDE
-.idea/
-*.iml
-*.ipr
-*.iws
-.vscode/
-*.swp
-*.swo
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Coverage
-coverage/
-
-# Temporary
-tmp/
-temp/
+# Test files
+test/
 ```

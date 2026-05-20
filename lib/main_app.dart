@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/themes/app_theme.dart';
 import '../presentation/bloc/theme_bloc.dart';
@@ -7,9 +8,6 @@ import '../presentation/pages/onboarding_page.dart';
 import '../presentation/pages/main_shell.dart';
 
 /// Main app widget dengan routing dan theme support.
-///
-/// Tema reaktif terhadap [ThemeNotifier]: toggle di Settings akan langsung
-/// memperbarui MaterialApp tanpa restart.
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
@@ -18,7 +16,8 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  bool _hasCompletedOnboarding = false;
+  // null = masih loading dari prefs
+  bool? _hasCompletedOnboarding;
 
   @override
   void initState() {
@@ -27,22 +26,41 @@ class _MainAppState extends State<MainApp> {
   }
 
   Future<void> _checkOnboardingStatus() async {
-    // TODO: Check from SharedPreferences or AppPreferences
-    setState(() {
-      _hasCompletedOnboarding = false;
-    });
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _hasCompletedOnboarding =
+            prefs.getBool('onboarding_completed') ?? false;
+      });
+    }
   }
 
-  void _onOnboardingComplete() {
-    setState(() {
-      _hasCompletedOnboarding = true;
-    });
-    // TODO: Save to preferences
+  Future<void> _onOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_completed', true);
+    if (mounted) {
+      setState(() => _hasCompletedOnboarding = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeNotifier>();
+
+    // Tampilkan layar kosong saat masih membaca prefs
+    // (biasanya < 50ms, tidak terlihat user)
+    if (_hasCompletedOnboarding == null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: theme.themeMode,
+        home: const Scaffold(
+          backgroundColor: Color(0xFF0C0C14),
+          body: SizedBox.shrink(),
+        ),
+      );
+    }
 
     return MaterialApp(
       title: 'Luma',
@@ -50,7 +68,7 @@ class _MainAppState extends State<MainApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: theme.themeMode,
-      home: _hasCompletedOnboarding
+      home: _hasCompletedOnboarding!
           ? const MainShell()
           : OnboardingPage(onComplete: _onOnboardingComplete),
     );

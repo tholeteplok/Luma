@@ -1,14 +1,17 @@
-// lib/presentation/pages/onboarding_page.dart
-
 import 'package:flutter/material.dart';
-import '../widgets/ambient_visualization.dart';
-import '../widgets/progress_dots.dart';
-import '../widgets/outlined_ghost_button.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
+import '../widgets/ambient_orb.dart';
+import '../widgets/progress_dots.dart';
 
+/// OnboardingPage — 3 slide perkenalan Luma.
+///
+/// Setiap slide punya AmbientOrb yang hidup (bukan lingkaran solid).
+/// Transisi antar slide: slide horizontal + fade.
+/// Teks menggunakan warna dari LumaPalette agar terbaca di dark & light mode.
 class OnboardingPage extends StatefulWidget {
-  final VoidCallback onComplete;
-  
+  final Future<void> Function() onComplete;
+
   const OnboardingPage({super.key, required this.onComplete});
 
   @override
@@ -17,6 +20,31 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   late final PageController _pageController;
+  int _currentPage = 0;
+  bool _completing = false;
+
+  static const _slides = [
+    _SlideData(
+      orbState: OrbState.dawn,
+      title: 'Luma belum mengenal\nritmemu.',
+      subtitle: 'Tidak ada form. Tidak ada target.',
+      buttonLabel: 'Lanjut',
+    ),
+    _SlideData(
+      orbState: OrbState.calm,
+      title: 'Luma mengamati.\nBukan menghakimi.',
+      subtitle: 'Semua data hanya ada di perangkatmu.\nKami tidak bisa melihatnya.',
+      buttonLabel: 'Aku percaya.',
+      showPrivacyTag: true,
+    ),
+    _SlideData(
+      orbState: OrbState.dawn,
+      title: 'Beberapa hari ke depan,\nLuma akan menyapamu.',
+      subtitle: 'Tidak ada yang perlu dilakukan.\nHanya... gunakan perangkatmu.',
+      buttonLabel: 'Mulai Gunakan',
+      showTimeline: true,
+    ),
+  ];
 
   @override
   void initState() {
@@ -30,221 +58,336 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
+  void _next() {
+    if (_currentPage < _slides.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _finish();
+    }
+  }
+
+  Future<void> _finish() async {
+    if (_completing) return;
+    setState(() => _completing = true);
+    await widget.onComplete();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          // You can perform actions on page change here if needed.
-        },
-        children: [
-          _OnboardingScreen1(onComplete: widget.onComplete),
-          const _OnboardingScreen2(),
-          _OnboardingScreen3(onComplete: widget.onComplete),
-        ],
+      backgroundColor: p.bgBase,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Orb area — 45% tinggi layar ──────────────────────────────────
+            Expanded(
+              flex: 45,
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemCount: _slides.length,
+                itemBuilder: (context, i) {
+                  return _OrbSlide(
+                    orbState: _slides[i].orbState,
+                    // Orb aktif hanya di halaman yang terlihat
+                    isActive: i == _currentPage,
+                  );
+                },
+              ),
+            ),
+
+            // ── Teks + konten ─────────────────────────────────────────────────
+            Expanded(
+              flex: 55,
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemCount: _slides.length,
+                itemBuilder: (context, i) {
+                  return _SlideContent(
+                    slide: _slides[i],
+                    onNext: _next,
+                    isLast: i == _slides.length - 1,
+                    isCompleting: _completing,
+                  );
+                },
+              ),
+            ),
+
+            // ── Progress dots ─────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: ProgressDots(
+                currentIndex: _currentPage,
+                total: _slides.length,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _OnboardingScreen1 extends StatelessWidget {
-  final VoidCallback? onComplete;
-  
-  const _OnboardingScreen1({this.onComplete});
+// ─────────────────────────────────────────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SlideData {
+  final OrbState orbState;
+  final String title;
+  final String subtitle;
+  final String buttonLabel;
+  final bool showPrivacyTag;
+  final bool showTimeline;
+
+  const _SlideData({
+    required this.orbState,
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    this.showPrivacyTag = false,
+    this.showTimeline = false,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ORB SLIDE — hanya orb, di-isolasi agar tidak rebuild teks
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _OrbSlide extends StatelessWidget {
+  final OrbState orbState;
+  final bool isActive;
+
+  const _OrbSlide({required this.orbState, required this.isActive});
 
   @override
   Widget build(BuildContext context) {
-    return _buildOnboardingScreen(
-      context,
-      ambientVariant: 1,
-      displayText: 'Luma belum mengenal\nritmemu.',
-      subText: 'Tidak ada form. Tidak ada target.',
-      progressDotIndex: 0,
-      buttonText: 'Lanjut',
-      onButtonPressed: () {},
+    final size = MediaQuery.sizeOf(context).width * 0.55;
+    return Center(
+      child: AmbientOrb(
+        state: orbState,
+        size: size,
+        reduceMotion: !isActive, // hemat resource saat tidak aktif
+      ),
     );
   }
 }
 
-class _OnboardingScreen2 extends StatelessWidget {
-  const _OnboardingScreen2();
+// ─────────────────────────────────────────────────────────────────────────────
+//  SLIDE CONTENT — teks + tombol
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SlideContent extends StatelessWidget {
+  final _SlideData slide;
+  final VoidCallback onNext;
+  final bool isLast;
+  final bool isCompleting;
+
+  const _SlideContent({
+    required this.slide,
+    required this.onNext,
+    required this.isLast,
+    required this.isCompleting,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return _buildOnboardingScreen(
-      context,
-      ambientVariant: 2,
-      displayText: 'Luma mengamati.\nBukan menghakimi.',
-      subText: 'Semua data hanya ada di perangkatmu.\nKami tidak bisa melihatnya.',
-      progressDotIndex: 1,
-      showPrivacyTag: true,
-      buttonText: 'Aku percaya.',
-      onButtonPressed: () {},
-    );
-  }
-}
+    final p = context.luma;
 
-class _OnboardingScreen3 extends StatelessWidget {
-  final VoidCallback? onComplete;
-  
-  const _OnboardingScreen3({this.onComplete});
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildOnboardingScreen(
-      context,
-      ambientVariant: 3,
-      displayText: 'Beberapa hari ke depan,\nLuma akan menyapamu.',
-      subText: 'Tidak ada yang perlu dilakukan.\nHanya... gunakan perangkatmu.',
-      progressDotIndex: 2,
-      showExpectedTimeline: true,
-      buttonText: 'Mulai Gunakan',
-      onButtonPressed: onComplete ?? () {},
-    );
-  }
-}
-
-Widget _buildOnboardingScreen(
-  BuildContext context, {
-  required int ambientVariant,
-  required String displayText,
-  required String subText,
-  required int progressDotIndex,
-  bool showPrivacyTag = false,
-  bool showExpectedTimeline = false,
-  required String buttonText,
-  required VoidCallback onButtonPressed,
-}) {
-  final state = context.findAncestorStateOfType<_OnboardingPageState>();
-  final pageController = state?._pageController;
-  
-  return Container(
-    color: AppColors.backgroundDark,
-    child: SafeArea(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            flex: 3,
-            child: AmbientVisualization(variant: ambientVariant),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              displayText,
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ),
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              subText,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textDarkSecondary,
-                  ),
-              textAlign: TextAlign.center,
+
+          // ── Judul ──────────────────────────────────────────────────────────
+          Text(
+            slide.title,
+            style: GoogleFonts.cormorantGaramond(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: p.textPrimary,   // selalu terbaca
+              height: 1.35,
             ),
+            textAlign: TextAlign.center,
           ),
-          if (showPrivacyTag) ...[
-            const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // ── Subtitle ───────────────────────────────────────────────────────
+          Text(
+            slide.subtitle,
+            style: GoogleFonts.dmSans(
+              fontSize: 15,
+              color: p.textSecondary, // sedikit lebih redup dari judul
+              height: 1.6,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          // ── Privacy tag (slide 2) ──────────────────────────────────────────
+          if (slide.showPrivacyTag) ...[
+            const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.positive.withValues(alpha: 0.1),
+                color: p.gentleBadgeBg,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: p.gentleInd.withValues(alpha: 0.4)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline, size: 16, color: AppColors.positive),
+                  Icon(Icons.lock_outline, size: 15, color: p.gentleText),
                   const SizedBox(width: 8),
                   Text(
                     'Zero-knowledge encryption',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textDarkSecondary,
-                        ),
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      color: p.gentleText,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
           ],
-          if (showExpectedTimeline) ...[
+
+          // ── Timeline (slide 3) ─────────────────────────────────────────────
+          if (slide.showTimeline) ...[
             const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  _buildTimelineItem(context, 'Hari 1-2', 'Mengamati...'),
-                  const SizedBox(height: 8),
-                  _buildTimelineItem(context, 'Hari 3', 'Sapaan pertama'),
-                  const SizedBox(height: 8),
-                  _buildTimelineItem(context, 'Hari 7', 'Refleksi mingguan'),
-                ],
-              ),
-            ),
+            _TimelineItems(p: p),
           ],
+
           const Spacer(),
-          ProgressDots(currentIndex: progressDotIndex, total: 3),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: OutlinedGhostButton(
-              text: buttonText,
-              onPressed: () {
-                if (progressDotIndex < 2 && pageController != null) {
-                  pageController.nextPage(
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeInOut,
-                  );
-                } else {
-                  onButtonPressed();
-                }
-              },
+
+          // ── Tombol ─────────────────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: _OnboardingButton(
+              label: slide.buttonLabel,
+              isLoading: isLast && isCompleting,
+              onPressed: onNext,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-Widget _buildTimelineItem(BuildContext context, String label, String description) {
-  return Row(
-    children: [
-      Container(
-        width: 12,
-        height: 12,
+// ─────────────────────────────────────────────────────────────────────────────
+//  TIMELINE ITEMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TimelineItems extends StatelessWidget {
+  final LumaPalette p;
+  const _TimelineItems({required this.p});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      ('Hari 1–2', 'Mengamati...'),
+      ('Hari 3', 'Sapaan pertama'),
+      ('Hari 7', 'Refleksi mingguan'),
+    ];
+
+    return Column(
+      children: items.map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: p.accent.withValues(alpha: 0.5),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                item.$1,
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: p.textTertiary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                item.$2,
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  color: p.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TOMBOL ONBOARDING
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _OnboardingButton extends StatelessWidget {
+  final String label;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  const _OnboardingButton({
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.luma;
+    return GestureDetector(
+      onTap: isLoading ? null : onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.primaryDark.withValues(alpha: 0.3),
-          shape: BoxShape.circle,
+          border: Border.all(
+            color: p.borderSubtle,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: p.bgSurface,
+        ),
+        child: Center(
+          child: isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: p.accent,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: p.textPrimary,
+                  ),
+                ),
         ),
       ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textDarkSecondary,
-                  ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textDarkSecondary,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
+    );
+  }
 }

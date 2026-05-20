@@ -190,27 +190,33 @@ class _AmbientOrbState extends State<AmbientOrb>
   @override
   Widget build(BuildContext context) {
     final s = widget.size;
-    // Canvas lebih besar dari orb agar blur tidak terpotong
-    final canvasSize = s + 64;
+    // Canvas harus cukup besar untuk blur terbesar (σ=36 → butuh ~108px padding)
+    // Rumus: padding = blurRadius * 3 (agar blur tidak terpotong di tepi)
+    final maxBlur = _configFor(widget.state).layers
+        .map((l) => l.blurRadius)
+        .reduce((a, b) => a > b ? a : b);
+    final canvasSize = s + maxBlur * 3;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       transitionBuilder: (child, anim) => FadeTransition(
         opacity: anim,
         child: child,
       ),
-      child: SizedBox(
+      child: RepaintBoundary(
         key: ValueKey(widget.state),
-        width: canvasSize,
-        height: canvasSize,
-        child: widget.reduceMotion
-            ? _buildStatic(s)
-            : AnimatedBuilder(
-                animation: _controller,
-                builder: (_, child) => _buildAnimated(s),
-              ),
+        child: SizedBox(
+          width: canvasSize,
+          height: canvasSize,
+          child: widget.reduceMotion
+              ? _buildStatic(s)
+              : AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, child) => _buildAnimated(s),
+                ),
+        ),
       ),
     );
   }
@@ -274,20 +280,22 @@ class _OrbLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: offset,
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(
-          sigmaX: blurRadius,
-          sigmaY: blurRadius,
-          tileMode: TileMode.clamp,
-        ),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: opacity),
+    return RepaintBoundary(
+      child: Transform.translate(
+        offset: offset,
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: blurRadius,
+            sigmaY: blurRadius,
+            tileMode: TileMode.clamp,
+          ),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: opacity),
+            ),
           ),
         ),
       ),

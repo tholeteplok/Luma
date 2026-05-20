@@ -5,6 +5,14 @@ allprojects {
     }
 }
 
+// Google Services plugin — diperlukan untuk google_sign_in
+// Versi harus sesuai dengan yang ada di google-services.json
+buildscript {
+    dependencies {
+        classpath("com.google.gms:google-services:4.4.2")
+    }
+}
+
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

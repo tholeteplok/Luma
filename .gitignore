@@ -56,7 +56,9 @@ android/gradlew.bat
 android/local.properties
 android/**/GeneratedPluginRegistrant.java
 android/key.properties
-android/app/google-services.json
+# google-services.json berisi OAuth credentials — jangan commit yang asli
+# Template sudah ada di repo, ganti dengan yang asli secara lokal
+# android/app/google-services.json
 **/android/.kotlin/
 **/android/**/build/
 **/android/**/.cxx/

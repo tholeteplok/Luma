@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis_auth/googleapis_auth.dart' as auth;
-import 'package:isar/isar.dart';
-import '../db/database_service.dart';
+import 'package:isar/isar.dart';import '../db/database_service.dart';
 import '../db/models/models.dart';
 import '../encryption/encryption_service.dart';
 import '../sync/drive_key_manager.dart';
@@ -63,10 +62,20 @@ class DriveBackupManager {
   /// Menampilkan dialog sign-in jika belum sign-in.
   /// Return false jika user membatalkan atau terjadi error.
   Future<bool> initializeWithSignIn() async {
+    if (!GoogleAuthService.isPlatformSupported) {
+      debugPrint('[DriveBackupManager] Backup tidak didukung di platform ini '
+          '(${defaultTargetPlatform.name}). Hanya Android dan iOS.');
+      return false;
+    }
+
+    if (!_auth.isConfigured) {
+      debugPrint('[DriveBackupManager] Google Auth belum dikonfigurasi. '
+          'Lihat komentar di google_auth_service.dart untuk setup.');
+      return false;
+    }
+
     try {
-      // Coba silent dulu
       var client = await _auth.signInSilently();
-      // Jika tidak ada session, tampilkan dialog
       client ??= await _auth.signIn();
 
       if (client == null) {

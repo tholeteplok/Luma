@@ -211,13 +211,13 @@ class SettingsNotifier extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        // null bisa berarti: sign-in dibatalkan, atau error teknis
-        // DriveBackupManager sudah log detail — tampilkan pesan umum
+        // null bisa berarti: platform tidak didukung, belum dikonfigurasi,
+        // sign-in dibatalkan, atau error teknis
         _state = _state.copyWith(
           isBackingUp: false,
           error: languageCode == 'id'
-              ? 'Backup gagal. Pastikan kamu sudah masuk ke akun Google.'
-              : 'Backup failed. Make sure you are signed in to Google.',
+              ? 'Backup gagal. Pastikan kamu sudah masuk ke akun Google dan koneksi internet aktif.'
+              : 'Backup failed. Make sure you are signed in to Google and have an active internet connection.',
         );
         notifyListeners();
         return false;

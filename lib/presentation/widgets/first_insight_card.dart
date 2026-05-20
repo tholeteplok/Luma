@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
+import '../../core/utils/luma_l10n.dart';
 
 /// FirstInsightCard — Kartu khusus untuk insight pertama Luma (hari 1–3).
 ///
@@ -153,8 +154,6 @@ class _FirstInsightFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.luma;
-    // Deteksi bahasa dari locale atau fallback ke ID
-    final isId = Localizations.localeOf(context).languageCode == 'id';
 
     return Row(
       children: [
@@ -169,9 +168,7 @@ class _FirstInsightFooter extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            isId
-                ? 'Ini baru permulaan. Luma akan semakin mengenalmu.'
-                : 'This is just the beginning. Luma will come to know you.',
+            context.l10n.firstInsightFooter,
             style: GoogleFonts.dmSans(
               fontSize: 11,
               color: p.textSubtle,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/themes/colors.dart';
+import '../../core/utils/luma_l10n.dart';
 
 /// LumaAppHeader — Header terpusat untuk semua screen Luma.
 /// Theme-aware via `context.luma`.
@@ -11,10 +12,11 @@ class LumaAppHeader extends StatelessWidget {
 
   const LumaAppHeader({super.key, this.onSettingsTap, this.title});
 
-  String _formatDate() {
+  String _formatDate(BuildContext context) {
     final now = DateTime.now();
+    final locale = context.isId ? 'id_ID' : 'en_US';
     try {
-      return DateFormat('EEEE, d MMMM', 'id_ID').format(now);
+      return DateFormat('EEEE, d MMMM', locale).format(now);
     } catch (_) {
       return DateFormat('EEEE, d MMMM').format(now);
     }
@@ -55,7 +57,7 @@ class LumaAppHeader extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              _formatDate(),
+              _formatDate(context),
               style: GoogleFonts.dmSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w400,

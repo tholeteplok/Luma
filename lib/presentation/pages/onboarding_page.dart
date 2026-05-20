@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
+import '../../core/utils/luma_l10n.dart';
 import '../widgets/ambient_orb.dart';
 import '../widgets/progress_dots.dart';
 
@@ -23,31 +24,25 @@ class _OnboardingPageState extends State<OnboardingPage> {
   int _currentPage = 0;
   bool _completing = false;
 
-  static const _slides = [
+  static List<_SlideData> _buildSlides(LumaStrings l) => [
     _SlideData(
       orbState: OrbState.dawn,
-      title: 'Luma belum mengenal\nritmemu.',
-      subtitle:
-          'Tidak ada form. Tidak ada target.\n'
-          'Luma belajar kapan pagimu dimulai — bisa jam 6 pagi, bisa jam 10 malam.',
-      buttonLabel: 'Lanjut',
+      title: l.slide1Title,
+      subtitle: l.slide1Sub,
+      buttonLabel: l.slide1Btn,
     ),
     _SlideData(
       orbState: OrbState.calm,
-      title: 'Luma mengamati.\nBukan menghakimi.',
-      subtitle:
-          'Semua data hanya ada di perangkatmu.\n'
-          'Kami tidak bisa melihatnya.',
-      buttonLabel: 'Aku percaya.',
+      title: l.slide2Title,
+      subtitle: l.slide2Sub,
+      buttonLabel: l.slide2Btn,
       showPrivacyTag: true,
     ),
     _SlideData(
       orbState: OrbState.dawn,
-      title: 'Beberapa hari ke depan,\nLuma akan menyapamu.',
-      subtitle:
-          'Tidak ada yang perlu dilakukan.\n'
-          'Hanya... gunakan perangkatmu.',
-      buttonLabel: 'Mulai Gunakan',
+      title: l.slide3Title,
+      subtitle: l.slide3Sub,
+      buttonLabel: l.slide3Btn,
       showTimeline: true,
     ),
   ];
@@ -65,7 +60,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _next() {
-    if (_currentPage < _slides.length - 1) {
+    final slides = _buildSlides(context.l10n);
+    if (_currentPage < slides.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 450),
         curve: Curves.easeInOut,
@@ -84,6 +80,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   Widget build(BuildContext context) {
     final p = context.luma;
+    final slides = _buildSlides(context.l10n);
 
     return Scaffold(
       backgroundColor: p.bgBase,
@@ -95,14 +92,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (i) => setState(() => _currentPage = i),
-                itemCount: _slides.length,
+                itemCount: slides.length,
                 itemBuilder: (context, i) {
-                  final slide = _slides[i];
+                  final slide = slides[i];
                   return _OnboardingSlide(
                     slide: slide,
                     isActive: i == _currentPage,
-                    isLast: i == _slides.length - 1,
-                    isCompleting: _completing && i == _slides.length - 1,
+                    isLast: i == slides.length - 1,
+                    isCompleting: _completing && i == slides.length - 1,
                     onNext: _next,
                   );
                 },
@@ -114,7 +111,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               padding: const EdgeInsets.only(bottom: 20),
               child: ProgressDots(
                 currentIndex: _currentPage,
-                total: _slides.length,
+                total: slides.length,
               ),
             ),
           ],
@@ -273,10 +270,11 @@ class _TimelineItems extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      ('Hari 1–2', 'Mengamati...'),
-      ('Hari 3', 'Sapaan pertama'),
-      ('Hari 7', 'Refleksi mingguan'),
+    final l = context.l10n;
+    final items = [
+      (l.timelineDay12, l.timelineObs),
+      (l.timelineDay3, l.timelineGreet),
+      (l.timelineDay7, l.timelineWeekly),
     ];
 
     return Column(

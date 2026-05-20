@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/themes/colors.dart';
+import '../../core/utils/luma_l10n.dart';
 import '../../domain/entities/insight_id.dart';
 import '../../domain/services/dimension_rotation.dart';
 import '../bloc/home_bloc.dart';
@@ -95,7 +96,7 @@ class _TimelineCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'MINGGU INI',
+            context.l10n.thisWeek,
             style: GoogleFonts.dmSans(
               fontSize: 10,
               fontWeight: FontWeight.w500,

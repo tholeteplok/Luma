@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
 import '../../core/utils/fade_granularity.dart';
+import '../../core/utils/luma_l10n.dart';
 
 /// InsightCard — Kartu insight dengan tone observasional.
 /// Sepenuhnya theme-aware via [LumaPalette] / `context.luma`.
@@ -77,33 +78,34 @@ class InsightCard extends StatelessWidget {
     }
   }
 
-  String _badgeLabel() {
-    final timeStr = _relativeTimeShort();
+  String _badgeLabel(LumaStrings l) {
+    final timeStr = _relativeTimeShort(l);
     switch (severity.toLowerCase()) {
       case 'critical':
       case 'warning':
-        return '$timeStr • PERHATIAN';
+        return '$timeStr • ${l.badgeWarning}';
       case 'notice':
-        return '$timeStr • CATATAN';
+        return '$timeStr • ${l.badgeNotice}';
       case 'gentle':
       case 'positive':
-        return '$timeStr • POLA';
+        return '$timeStr • ${l.badgePattern}';
       default:
-        return '$timeStr • INFO';
+        return '$timeStr • ${l.badgeInfo}';
     }
   }
 
-  String _relativeTimeShort() {
+  String _relativeTimeShort(LumaStrings l) {
     final diff = DateTime.now().difference(timestamp);
-    if (diff.inDays == 0) return 'BARU SAJA';
-    if (diff.inDays == 1) return 'KEMARIN';
-    if (diff.inDays < 7) return '${diff.inDays}H LALU';
-    return 'MINGGU LALU';
+    if (diff.inDays == 0) return l.timeJustNow;
+    if (diff.inDays == 1) return l.timeYesterday;
+    if (diff.inDays < 7) return l.daysAgo(diff.inDays);
+    return l.timeLastWeek;
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.luma;
+    final l = context.l10n;
     final daysOld = DateTime.now().difference(timestamp).inDays;
     final opacity = FadeGranularity.getOpacity(daysOld);
     final blurSigma = FadeGranularity.getBlurSigma(daysOld);
@@ -154,7 +156,7 @@ class InsightCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            _badgeLabel(),
+                            _badgeLabel(l),
                             style: GoogleFonts.dmSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
@@ -188,8 +190,7 @@ class InsightCard extends StatelessWidget {
                         Container(height: 1, color: p.borderFaint),
                         const SizedBox(height: 10),
                         Text(
-                          'Luma akan terus mengamati. '
-                          'Pola biasanya muncul setelah beberapa hari.',
+                          l.insightFooter,
                           style: GoogleFonts.dmSans(
                             fontSize: 11,
                             color: p.textSubtle,

@@ -9,6 +9,7 @@ import '../widgets/first_insight_card.dart';import '../widgets/insight_card.dart
 import '../widgets/luma_app_header.dart';
 import '../painters/fading_line_painter.dart';
 import '../../core/themes/colors.dart';
+import '../../core/utils/luma_l10n.dart';
 
 /// Home page — Cermin ritme Luma
 ///
@@ -129,7 +130,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'MINGGU INI',
+            context.l10n.thisWeek,
             style: GoogleFonts.dmSans(
               fontSize: 10,
               fontWeight: FontWeight.w500,
@@ -163,7 +164,7 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Insight',
+            context.l10n.insight,
             style: GoogleFonts.dmSans(
               fontSize: 17,
               fontWeight: FontWeight.w500,
@@ -174,7 +175,7 @@ class _HomePageState extends State<HomePage> {
             GestureDetector(
               onTap: () => setState(() => _showHistory = !_showHistory),
               child: Text(
-                _showHistory ? 'Sembunyikan' : 'Lihat insight sebelumnya',
+                _showHistory ? context.l10n.hide : context.l10n.viewPrevious,
                 style: GoogleFonts.dmSans(
                   fontSize: 13,
                   color: p.accent,
@@ -183,7 +184,7 @@ class _HomePageState extends State<HomePage> {
             )
           else
             Text(
-              'Lihat Semua',
+              context.l10n.viewAll,
               style: GoogleFonts.dmSans(
                 fontSize: 13,
                 color: p.accent,
@@ -283,7 +284,7 @@ class _HomePageState extends State<HomePage> {
   // ── Silent card ────────────────────────────────────────────────────────────
   Widget _buildSilentCard(SettingsNotifier settingsState) {
     final p = context.luma;
-    final isId = settingsState.languageCode == 'id';
+    final l = context.l10n;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(24),
@@ -298,9 +299,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isId
-                ? 'Luma sedang mengamati hari ini.'
-                : 'Luma is quietly observing today.',
+            l.lumaObserving,
             style: GoogleFonts.cormorantGaramond(
               fontSize: 19,
               fontStyle: FontStyle.italic,
@@ -310,9 +309,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 6),
           Text(
-            isId
-                ? 'Tidak setiap hari perlu diberi nama.'
-                : 'Not every day needs to be named.',
+            l.notEveryDay,
             style: GoogleFonts.dmSans(
               fontSize: 12,
               color: p.textSubtle,
@@ -327,7 +324,7 @@ class _HomePageState extends State<HomePage> {
   // ── Empty insight ──────────────────────────────────────────────────────────
   Widget _buildEmptyInsight(SettingsNotifier settingsState) {
     final p = context.luma;
-    final isId = settingsState.languageCode == 'id';
+    final l = context.l10n;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       padding: const EdgeInsets.all(24),
@@ -338,9 +335,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         children: [
           Text(
-            isId
-                ? 'Luma masih mengamati ritmemu.'
-                : 'Luma is still observing your rhythm.',
+            l.lumaWatching,
             textAlign: TextAlign.center,
             style: GoogleFonts.cormorantGaramond(
               fontSize: 18,
@@ -351,9 +346,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           Text(
-            isId
-                ? 'Biasanya pola mulai terlihat setelah beberapa hari.'
-                : 'Patterns usually begin to appear after a few days.',
+            l.patternsAppear,
             textAlign: TextAlign.center,
             style: GoogleFonts.dmSans(
               fontSize: 12,
@@ -375,7 +368,7 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Sesuatu berbeda hari ini.',
+            context.l10n.somethingDiff,
             style: GoogleFonts.cormorantGaramond(
               fontSize: 20,
               fontStyle: FontStyle.italic,
@@ -393,7 +386,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Coba lagi',
+                context.l10n.tryAgain,
                 style: GoogleFonts.dmSans(
                   fontSize: 14,
                   color: p.textSecondary,

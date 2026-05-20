@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
+import '../../core/utils/luma_l10n.dart';
 import '../../core/platform/permission_service.dart';
 import '../widgets/ambient_orb.dart';
 import '../widgets/outlined_ghost_button.dart';
@@ -163,7 +164,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Luma butuh izin\nuntuk bekerja.',
+                      context.l10n.permTitle,
                       style: GoogleFonts.cormorantGaramond(
                         fontSize: 30,
                         fontWeight: FontWeight.w400,
@@ -173,7 +174,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tidak ada yang dinilai. Semua data hanya ada di perangkatmu.',
+                      context.l10n.permSubtitle,
                       style: GoogleFonts.dmSans(
                         fontSize: 14,
                         color: p.textTertiary,
@@ -185,9 +186,8 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
                     // ── Item 1: App Usage (wajib) ─────────────────────────────
                     _PermissionItem(
                       icon: Icons.phonelink_setup_outlined,
-                      title: 'Akses ke daftar aplikasi',
-                      subtitle: 'Luma melihat app apa saja yang kamu buka — '
-                          'ini satu-satunya cara Luma bisa mengamati.',
+                      title: context.l10n.permUsageTitle,
+                      subtitle: context.l10n.permUsageSubtitle,
                       isGranted: _appUsageGranted,
                       isLoading: _isPollingUsage && !_appUsageGranted,
                       isRequired: true,
@@ -199,15 +199,15 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
                     // ── Item 2: Notifikasi (opsional) ─────────────────────────
                     _PermissionItem(
                       icon: Icons.notifications_outlined,
-                      title: 'Notifikasi insight',
+                      title: context.l10n.permNotifTitle,
                       subtitle: _notificationPermanentlyDenied
-                          ? 'Buka Pengaturan untuk mengaktifkan notifikasi.'
-                          : 'Luma memberi tahu saat ada pola baru yang muncul.',
+                          ? context.l10n.permNotifDenied
+                          : context.l10n.permNotifSubtitle,
                       isGranted: _notificationGranted,
                       isLoading: _isRequestingNotification,
                       isRequired: false,
                       actionLabel: _notificationPermanentlyDenied
-                          ? 'Buka Pengaturan'
+                          ? context.l10n.permOpenSettings
                           : null,
                       onTap: _notificationGranted
                           ? null
@@ -224,7 +224,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
               child: Column(
                 children: [
                   OutlinedGhostButton(
-                    text: 'Lanjut',
+                    text: context.l10n.permContinue,
                     enabled: _canProceed,
                     onPressed: _canProceed ? widget.onPermissionsGranted : null,
                   ),
@@ -233,7 +233,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
                     GestureDetector(
                       onTap: widget.onPermissionsGranted,
                       child: Text(
-                        'Lewati dulu',
+                        context.l10n.permSkip,
                         style: GoogleFonts.dmSans(
                           fontSize: 13,
                           color: p.textSubtle,
@@ -355,7 +355,7 @@ class _PermissionItem extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'WAJIB',
+                            context.l10n.permRequired,
                             style: GoogleFonts.dmSans(
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
@@ -374,7 +374,7 @@ class _PermissionItem extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'OPSIONAL',
+                            context.l10n.permOptional,
                             style: GoogleFonts.dmSans(
                               fontSize: 9,
                               fontWeight: FontWeight.w500,

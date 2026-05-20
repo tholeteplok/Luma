@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/themes/colors.dart';
-import '../../data/tracking/usage_stats_service.dart';
+import '../../core/platform/permission_service.dart';
 import '../widgets/ambient_orb.dart';
 import '../widgets/outlined_ghost_button.dart';
 
@@ -36,8 +36,6 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
   bool _isPolling = false;
   Timer? _pollTimer;
 
-  final _usageStats = UsageStatsService();
-
   @override
   void initState() {
     super.initState();
@@ -62,7 +60,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
 
   /// Cek permission yang sudah ada saat pertama buka
   Future<void> _checkExistingPermissions() async {
-    final granted = await _usageStats.hasUsageStatsPermission();
+    final granted = await PermissionService.hasUsageStatsPermission();
     if (mounted) {
       setState(() => _appUsageGranted = granted);
     }
@@ -71,9 +69,8 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
   /// User tap checkbox app usage → buka Settings
   Future<void> _requestAppUsagePermission() async {
     setState(() => _isPolling = true);
-    await _usageStats.openAppSettings();
+    await PermissionService.openUsageAccessSettings();
     // Polling dimulai saat app kembali ke foreground (via didChangeAppLifecycleState)
-    // Tapi juga mulai sekarang untuk jaga-jaga
     _startPolling();
   }
 
@@ -83,7 +80,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
     int attempts = 0;
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
       attempts++;
-      final granted = await _usageStats.hasUsageStatsPermission();
+      final granted = await PermissionService.hasUsageStatsPermission();
       if (granted && mounted) {
         timer.cancel();
         setState(() {
@@ -91,7 +88,6 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
           _isPolling = false;
         });
       } else if (attempts >= 40) {
-        // 20 detik — berhenti polling
         timer.cancel();
         if (mounted) setState(() => _isPolling = false);
       }

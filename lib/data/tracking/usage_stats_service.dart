@@ -1,4 +1,5 @@
 import 'package:usage_stats/usage_stats.dart';
+import 'package:luma/core/platform/permission_service.dart';
 import 'package:luma/data/db/models/event_type.dart';
 import 'package:luma/data/db/models/raw_event.dart';
 import 'package:logging/logging.dart';
@@ -10,38 +11,16 @@ import 'package:logging/logging.dart';
 class UsageStatsService {
   static final _log = Logger('UsageStatsService');
 
-  /// Cek apakah permission usage stats sudah diberikan
+  /// Cek apakah permission usage stats sudah diberikan.
+  /// Menggunakan AppOpsManager via MethodChannel — lebih reliable dari
+  /// UsageStats.checkUsagePermission() dan menghindari dialog OEM.
   Future<bool> hasUsageStatsPermission() async {
-    try {
-      final isGranted = await UsageStats.checkUsagePermission();
-      return isGranted ?? false;
-    } catch (e) {
-      _log.warning('Error checking usage stats permission: $e');
-      return false;
-    }
+    return PermissionService.hasUsageStatsPermission();
   }
 
-  /// Request permission usage stats
-  /// Returns true jika granted, false jika denied/permanently denied
-  Future<bool> requestUsageStatsPermission() async {
-    try {
-      await UsageStats.grantUsagePermission();
-      // Periksa status setelah membuka pengaturan
-      final isGranted = await hasUsageStatsPermission();
-      return isGranted;
-    } catch (e) {
-      _log.severe('Error requesting usage stats permission: $e');
-      return false;
-    }
-  }
-
-  /// Redirect user ke settings page untuk grant permission manual
+  /// Buka Usage Access Settings langsung ke entry Luma.
   Future<void> openAppSettings() async {
-    try {
-      await UsageStats.grantUsagePermission();
-    } catch (e) {
-      _log.severe('Error opening app settings for usage stats: $e');
-    }
+    await PermissionService.openUsageAccessSettings();
   }
 
   /// Ambil daftar aplikasi yang digunakan dalam rentang waktu tertentu

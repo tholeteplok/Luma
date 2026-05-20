@@ -1,18 +1,24 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:luma/domain/entities/ambience_profile.dart';
 import 'package:luma/domain/services/orb_state_engine.dart';
 
+export 'package:luma/domain/entities/ambience_profile.dart'
+    show OrbVariant, BiologicalTimePhase, WeeklyRhythmState, AmbienceProfile;
 export 'package:luma/domain/services/orb_state_engine.dart' show OrbState;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  PALETTE — Bioluminescence (Laut Dalam)
+//  PALETTE — Bioluminescence (Laut Dalam) + Adaptive Ambience variants
 //
 //  Palette: Emerald & Gold (#EEE8B2, #C18D52, #081B1B, #203B37, #5A8F76, #96CDB0)
 //
-//  Dawn  → teal sangat gelap, seperti laut sebelum fajar
-//  Calm  → hijau laut dalam, stabil dan tenang
-//  Wave  → teal-biru bergerak, seperti ombak malam
-//  Mist  → abu-abu kehijauan, kehadiran tanpa bentuk
+//  dawn    → teal sangat gelap, seperti laut sebelum fajar
+//  calm    → hijau laut dalam, stabil dan tenang
+//  wave    → ungu-teal, gelisah (ungu valid untuk varian orb)
+//  mist    → abu-abu kehijauan, kehadiran tanpa bentuk
+//  dusk    → oranye redup, malam yang panjang
+//  recover → hijau sage muda, mengembang pelan
+//  stellar → krem-gold, denyut sangat pelan
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _OrbPalette {
@@ -35,15 +41,15 @@ class _OrbPalette {
 
 const _palettes = {
   OrbState.dawn: _OrbPalette(
-    core:  Color(0xFF1A5A4A), // teal redup — belum sepenuhnya terbentuk
+    core:  Color(0xFF1A5A4A),
     mid:   Color(0xFF0F3A2E),
-    outer: Color(0xFF081B1B), // #081B1B
+    outer: Color(0xFF081B1B),
     waveIntensity: 0.045,
     wavePoints: 7,
     breathDuration: Duration(milliseconds: 6500),
   ),
   OrbState.calm: _OrbPalette(
-    core:  Color(0xFF5A8F76), // #5A8F76 — hijau laut dalam
+    core:  Color(0xFF5A8F76), // #5A8F76
     mid:   Color(0xFF203B37), // #203B37
     outer: Color(0xFF0F2626),
     waveIntensity: 0.030,
@@ -51,15 +57,15 @@ const _palettes = {
     breathDuration: Duration(milliseconds: 5500),
   ),
   OrbState.wave: _OrbPalette(
-    core:  Color(0xFF3A6A5A), // teal bergerak
-    mid:   Color(0xFF1E4A3A),
-    outer: Color(0xFF0F2E24),
+    core:  Color(0xFF6B5A8A), // ungu-teal — gelisah
+    mid:   Color(0xFF3A2A5A),
+    outer: Color(0xFF1A0F2E),
     waveIntensity: 0.075,
     wavePoints: 11,
     breathDuration: Duration(milliseconds: 3800),
   ),
   OrbState.mist: _OrbPalette(
-    core:  Color(0xFF1E2E2A), // abu-abu kehijauan — hadir tanpa bentuk
+    core:  Color(0xFF1E2E2A),
     mid:   Color(0xFF141E1C),
     outer: Color(0xFF0A1412),
     waveIntensity: 0.018,
@@ -68,26 +74,80 @@ const _palettes = {
   ),
 };
 
+/// Palette untuk varian baru (OrbVariant yang tidak ada di OrbState)
+const _variantPalettes = <OrbVariant, _OrbPalette>{
+  OrbVariant.dusk: _OrbPalette(
+    core:  Color(0xFF5A3010), // oranye redup — malam yang panjang
+    mid:   Color(0xFF3A1E08),
+    outer: Color(0xFF1A0A04),
+    waveIntensity: 0.025,
+    wavePoints: 7,
+    breathDuration: Duration(milliseconds: 8000),
+  ),
+  OrbVariant.recover: _OrbPalette(
+    core:  Color(0xFF2A5A3A), // hijau sage muda — mengembang pelan
+    mid:   Color(0xFF1A3A26),
+    outer: Color(0xFF0C2018),
+    waveIntensity: 0.022,
+    wavePoints: 8,
+    breathDuration: Duration(milliseconds: 7500),
+  ),
+  OrbVariant.stellar: _OrbPalette(
+    core:  Color(0xFFEEE8B2), // #EEE8B2 — krem keemasan
+    mid:   Color(0xFFC18D52), // #C18D52 — gold
+    outer: Color(0xFF3A2A10),
+    waveIntensity: 0.012, // hampir tidak bergerak
+    wavePoints: 6,
+    breathDuration: Duration(milliseconds: 11000), // denyut sangat pelan
+  ),
+};
+
+/// Ambil palette dari OrbVariant — cek variantPalettes dulu, fallback ke _palettes
+_OrbPalette _paletteForVariant(OrbVariant variant) {
+  if (_variantPalettes.containsKey(variant)) {
+    return _variantPalettes[variant]!;
+  }
+  // Map OrbVariant → OrbState untuk varian yang sama
+  final stateMap = {
+    OrbVariant.dawn: OrbState.dawn,
+    OrbVariant.calm: OrbState.calm,
+    OrbVariant.wave: OrbState.wave,
+    OrbVariant.mist: OrbState.mist,
+  };
+  return _palettes[stateMap[variant] ?? OrbState.dawn]!;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  AMBIENT ORB WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// AmbientOrb — Cermin visual ritme digital Luma.
 ///
-/// Menggunakan CustomPainter dengan bezier organik per titik —
-/// bukan ScaleTransition yang mekanis.
-/// Setiap layer bergerak dengan fase sinus berbeda (staggered),
-/// menciptakan ilusi cairan yang bernapas.
+/// Menggunakan CustomPainter dengan bezier organik per titik.
+/// Support dua mode:
+/// - Legacy: `state` (OrbState) — backward compat
+/// - Adaptive: `profile` (AmbienceProfile) — full adaptive ambience
 class AmbientOrb extends StatefulWidget {
+  /// Legacy: OrbState langsung (backward compat)
   final OrbState state;
+
+  /// Adaptive: AmbienceProfile dari AdaptiveAmbienceEngine (opsional)
+  /// Jika diberikan, mengoverride `state` dan menerapkan modifikasi BiologicalTimePhase + WeeklyRhythmState
+  final AmbienceProfile? profile;
+
   final double size;
   final bool reduceMotion;
+
+  /// Aktifkan NostalgiaEffect — aura gold tipis + napas lebih lambat
+  final bool nostalgiaActive;
 
   const AmbientOrb({
     super.key,
     this.state = OrbState.dawn,
+    this.profile,
     this.size = 160,
     this.reduceMotion = false,
+    this.nostalgiaActive = false,
   });
 
   @override
@@ -98,12 +158,73 @@ class _AmbientOrbState extends State<AmbientOrb>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
+  /// Palette aktif — dihitung dari profile atau state
+  _OrbPalette get _activePalette {
+    if (widget.profile != null) {
+      return _applyAmbienceModifiers(
+        _paletteForVariant(widget.profile!.orbVariant),
+        widget.profile!,
+      );
+    }
+    return _palettes[widget.state]!;
+  }
+
+  /// Terapkan modifikasi dari BiologicalTimePhase dan WeeklyRhythmState
+  _OrbPalette _applyAmbienceModifiers(_OrbPalette base, AmbienceProfile profile) {
+    double breathMs = base.breathDuration.inMilliseconds.toDouble();
+    double waveIntensity = base.waveIntensity;
+    int wavePoints = base.wavePoints;
+
+    // BiologicalTimePhase modifikasi
+    switch (profile.timePhase) {
+      case BiologicalTimePhase.personalMorning:
+        breathMs *= 1.2; // napas lebih lambat di pagi
+      case BiologicalTimePhase.personalNight:
+        breathMs *= 1.3;
+        waveIntensity *= 0.8; // lebih tenang di malam
+      case BiologicalTimePhase.personalEvening:
+      case BiologicalTimePhase.personalMidday:
+        break; // default
+    }
+
+    // WeeklyRhythmState modifikasi
+    switch (profile.rhythmState) {
+      case WeeklyRhythmState.clear:
+        wavePoints = wavePoints.clamp(1, 8);
+        waveIntensity = waveIntensity.clamp(0.0, 0.035);
+      case WeeklyRhythmState.dim:
+        wavePoints = wavePoints.clamp(10, 16);
+        waveIntensity = waveIntensity.clamp(0.060, 1.0);
+      case WeeklyRhythmState.stable:
+      case WeeklyRhythmState.undulating:
+        break;
+    }
+
+    // NostalgiaEffect: napas lebih lambat
+    if (widget.nostalgiaActive) {
+      breathMs *= 1.25;
+    }
+
+    return _OrbPalette(
+      core: base.core,
+      mid: base.mid,
+      outer: base.outer,
+      waveIntensity: waveIntensity,
+      wavePoints: wavePoints,
+      breathDuration: Duration(milliseconds: breathMs.round()),
+    );
+  }
+
+  /// Key untuk AnimatedSwitcher — berubah saat variant atau state berubah
+  Object get _switcherKey =>
+      widget.profile?.orbVariant ?? widget.state;
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: _palettes[widget.state]!.breathDuration,
+      duration: _activePalette.breathDuration,
     );
     if (!widget.reduceMotion) _controller.repeat();
   }
@@ -112,8 +233,13 @@ class _AmbientOrbState extends State<AmbientOrb>
   void didUpdateWidget(AmbientOrb oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.state != oldWidget.state) {
-      _controller.duration = _palettes[widget.state]!.breathDuration;
+    // Cek apakah variant/state berubah
+    final variantChanged = widget.profile?.orbVariant != oldWidget.profile?.orbVariant;
+    final stateChanged = widget.state != oldWidget.state;
+    final nostalgiaChanged = widget.nostalgiaActive != oldWidget.nostalgiaActive;
+
+    if (variantChanged || stateChanged || nostalgiaChanged) {
+      _controller.duration = _activePalette.breathDuration;
       if (!widget.reduceMotion) _controller.repeat();
     }
 
@@ -130,19 +256,18 @@ class _AmbientOrbState extends State<AmbientOrb>
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palettes[widget.state]!;
-    // Canvas lebih besar agar aura luar tidak terpotong
-    // Aura spread = size * 0.4, jadi padding = size * 0.45 di setiap sisi
+    final palette = _activePalette;
     final canvasSize = widget.size * 1.9;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 1600),
+      // 3000ms untuk transisi antar variant (lebih lambat = lebih halus)
+      duration: const Duration(milliseconds: 3000),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       transitionBuilder: (child, anim) =>
           FadeTransition(opacity: anim, child: child),
       child: RepaintBoundary(
-        key: ValueKey(widget.state),
+        key: ValueKey(_switcherKey),
         child: SizedBox(
           width: canvasSize,
           height: canvasSize,
@@ -152,6 +277,9 @@ class _AmbientOrbState extends State<AmbientOrb>
                     progress: 0.0,
                     palette: palette,
                     orbSize: widget.size,
+                    nostalgiaActive: widget.nostalgiaActive,
+                    // personalEvening: geser pusat ke bawah
+                    centerOffsetY: _centerOffsetY,
                   ),
                 )
               : AnimatedBuilder(
@@ -161,12 +289,22 @@ class _AmbientOrbState extends State<AmbientOrb>
                       progress: _controller.value,
                       palette: palette,
                       orbSize: widget.size,
+                      nostalgiaActive: widget.nostalgiaActive,
+                      centerOffsetY: _centerOffsetY,
                     ),
                   ),
                 ),
         ),
       ),
     );
+  }
+
+  /// Offset vertikal pusat orb untuk personalEvening (8% dari orbSize)
+  double get _centerOffsetY {
+    if (widget.profile?.timePhase == BiologicalTimePhase.personalEvening) {
+      return widget.size * 0.08;
+    }
+    return 0.0;
   }
 }
 
@@ -178,22 +316,29 @@ class _OrbPainter extends CustomPainter {
   final double progress;
   final _OrbPalette palette;
   final double orbSize;
+  final bool nostalgiaActive;
+  final double centerOffsetY;
 
   const _OrbPainter({
     required this.progress,
     required this.palette,
     required this.orbSize,
+    this.nostalgiaActive = false,
+    this.centerOffsetY = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    // Terapkan centerOffsetY untuk personalEvening (pusat bergeser ke bawah)
+    final center = Offset(size.width / 2, size.height / 2 + centerOffsetY);
     final maxRadius = orbSize / 2;
-    final t = progress * math.pi * 2; // waktu dalam radian
+    final t = progress * math.pi * 2;
 
-    // ── Layer 0: Aura luar — pendaran ambient statis ──────────────────────────
-    // Tidak bergerak, hanya memberikan "kedalaman" di sekitar orb
+    // ── Layer 0: Aura luar + NostalgiaEffect ─────────────────────────────────
     _paintAura(canvas, center, maxRadius);
+    if (nostalgiaActive) {
+      _paintNostalgiaGlow(canvas, center, maxRadius);
+    }
 
     // ── Layer 1–3: Blob organik dengan fase berbeda ───────────────────────────
     // Layer terluar → terdalam, opacity naik, ukuran turun
@@ -235,8 +380,7 @@ class _OrbPainter extends CustomPainter {
         colors: [
           palette.mid.withValues(alpha: 0.18),
           palette.outer.withValues(alpha: 0.06),
-          Colors.transparent,
-        ],
+          Colors.transparent,        ],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(
         Rect.fromCircle(center: center, radius: maxRadius * 1.8),
@@ -317,11 +461,33 @@ class _OrbPainter extends CustomPainter {
     canvas.drawCircle(center, maxRadius * 0.18, paint);
   }
 
+  /// NostalgiaEffect — aura gold tipis di sekitar orb
+  /// Muncul saat user membuka insight >30 hari lalu
+  void _paintNostalgiaGlow(Canvas canvas, Offset center, double maxRadius) {
+    const goldColor = Color(0xFFC18D52); // #C18D52
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.transparent,
+          goldColor.withValues(alpha: 0.08),
+          goldColor.withValues(alpha: 0.15),
+          goldColor.withValues(alpha: 0.04),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.55, 0.70, 0.85, 1.0],
+      ).createShader(
+        Rect.fromCircle(center: center, radius: maxRadius * 1.6),
+      );
+    canvas.drawCircle(center, maxRadius * 1.6, paint);
+  }
+
   @override
   bool shouldRepaint(covariant _OrbPainter old) =>
       old.progress != progress ||
       old.palette != palette ||
-      old.orbSize != orbSize;
+      old.orbSize != orbSize ||
+      old.nostalgiaActive != nostalgiaActive ||
+      old.centerOffsetY != centerOffsetY;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

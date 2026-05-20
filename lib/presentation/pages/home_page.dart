@@ -102,8 +102,10 @@ class _HomePageState extends State<HomePage> {
       child: Center(
         child: AmbientOrb(
           state: homeState.orbState,
+          profile: homeState.ambienceProfile,
           size: orbSize,
           reduceMotion: reduceMotion,
+          nostalgiaActive: homeState.nostalgiaActive,
         ),
       ),
     );
@@ -258,6 +260,12 @@ class _HomePageState extends State<HomePage> {
                     ? insight['timestamp'] as DateTime
                     : DateTime.now(),
                 isRead: insight['isRead'] as bool? ?? false,
+                nostalgiaActive: homeState.nostalgiaActive &&
+                    (insight['timestamp'] is DateTime
+                        ? DateTime.now()
+                            .difference(insight['timestamp'] as DateTime)
+                            .inDays > 30
+                        : false),
                 onTap: () {},
                 onDismiss: () {},
               ),

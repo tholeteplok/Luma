@@ -67,4 +67,8 @@ class FadeGranularity {
         ? 'Data ini akan dirangkum dalam beberapa hari. Pola tetap tersimpan.'
         : 'This data will be summarized in a few days. Patterns remain.';
   }
+
+  /// Apakah teks insight harus ditampilkan italic?
+  /// True hanya untuk state silhouette (28+ hari) — sesuai spec Memory Fading.
+  static bool isItalic(int daysOld) => daysOld > 28;
 }

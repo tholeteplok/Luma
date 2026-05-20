@@ -11,6 +11,8 @@ import 'package:luma/domain/services/insight_language_engine.dart';
 import 'package:luma/domain/services/insight_memory.dart';
 import 'package:luma/domain/services/insight_orchestrator.dart';
 import 'package:luma/domain/services/orb_state_engine.dart';
+import 'package:luma/domain/services/adaptive_ambience_engine.dart';
+import 'package:luma/domain/entities/ambience_profile.dart';
 import 'package:luma/core/utils/luma_language.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -50,6 +52,13 @@ class HomeState {
   /// State orb adaptif — berevolusi berdasarkan pola perilaku.
   final OrbState orbState;
 
+  /// Profile ambience lengkap dari AdaptiveAmbienceEngine.
+  /// Null jika data belum cukup atau engine belum dijalankan.
+  final AmbienceProfile? ambienceProfile;
+
+  /// True jika ada insight dalam history berusia >30 hari
+  final bool nostalgiaActive;
+
   const HomeState({
     this.isLoading = false,
     this.error,
@@ -63,6 +72,8 @@ class HomeState {
     this.depth = DepthLevel.surface,
     this.isFirstInsight = false,
     this.orbState = OrbState.dawn,
+    this.ambienceProfile,
+    this.nostalgiaActive = false,
   });
 
   HomeState copyWith({
@@ -79,6 +90,8 @@ class HomeState {
     DepthLevel? depth,
     bool? isFirstInsight,
     OrbState? orbState,
+    AmbienceProfile? ambienceProfile,
+    bool? nostalgiaActive,
   }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
@@ -93,6 +106,8 @@ class HomeState {
       depth: depth ?? this.depth,
       isFirstInsight: isFirstInsight ?? this.isFirstInsight,
       orbState: orbState ?? this.orbState,
+      ambienceProfile: ambienceProfile ?? this.ambienceProfile,
+      nostalgiaActive: nostalgiaActive ?? this.nostalgiaActive,
     );
   }
 }
@@ -125,6 +140,8 @@ class HomeNotifier extends ChangeNotifier {
   bool get isSilent => _state.isSilent;
   bool get isFirstInsight => _state.isFirstInsight;
   OrbState get orbState => _state.orbState;
+  AmbienceProfile? get ambienceProfile => _state.ambienceProfile;
+  bool get nostalgiaActive => _state.nostalgiaActive;
   InsightDimension get activeDimension => _state.activeDimension;
   DepthLevel get depth => _state.depth;
 
@@ -234,6 +251,22 @@ class HomeNotifier extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final newOrbState = await OrbStateEngine.evaluate(snapshot, prefs);
 
+      // 10c. Evaluasi AmbienceProfile (AdaptiveAmbienceEngine)
+      final newAmbienceProfile = await AdaptiveAmbienceEngine.evaluate(
+        snapshot,
+        await _db.getDailySummariesBetween(
+          DateTime.now().subtract(const Duration(days: 7)),
+          DateTime.now(),
+        ),
+        prefs,
+      );
+
+      // 10d. Deteksi nostalgia — ada insight history berusia >30 hari
+      final historyRecords = _memory?.getHistory() ?? const [];
+      final hasNostalgia = historyRecords.any(
+        (r) => DateTime.now().difference(r.shownAt).inDays > 30,
+      );
+
       // 11. Hitung severity context (budget mingguan)
       final isFirstInsight = baselineDays < 3;
       var severityCtx = SeverityContext(daysOfData: baselineDays);
@@ -276,6 +309,8 @@ class HomeNotifier extends ChangeNotifier {
         isSilent: decision.isSilent,
         isFirstInsight: isFirstInsight,
         orbState: newOrbState,
+        ambienceProfile: newAmbienceProfile,
+        nostalgiaActive: hasNostalgia,
         activeDimension: decision.activeDimension,
         depth: decision.depth,
         todaySummary: todayDb != null

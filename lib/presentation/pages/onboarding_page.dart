@@ -27,7 +27,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _SlideData(
       orbState: OrbState.dawn,
       title: 'Luma belum mengenal\nritmemu.',
-      subtitle: 'Tidak ada form. Tidak ada target.',
+      subtitle: 'Tidak ada form. Tidak ada target.\nLuma belajar kapan pagimu dimulai — bisa jam 6 pagi, bisa jam 10 malam.',
       buttonLabel: 'Lanjut',
     ),
     _SlideData(

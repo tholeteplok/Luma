@@ -16,6 +16,9 @@ class InsightCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDismiss;
 
+  /// Aktifkan NostalgiaEffect — glow gold tipis di sekitar card
+  final bool nostalgiaActive;
+
   const InsightCard({
     super.key,
     required this.id,
@@ -26,6 +29,7 @@ class InsightCard extends StatelessWidget {
     this.isRead = false,
     this.onTap,
     this.onDismiss,
+    this.nostalgiaActive = false,
   });
 
   Color _indicatorColor(LumaPalette p) {
@@ -103,6 +107,7 @@ class InsightCard extends StatelessWidget {
     final daysOld = DateTime.now().difference(timestamp).inDays;
     final opacity = FadeGranularity.getOpacity(daysOld);
     final blurSigma = FadeGranularity.getBlurSigma(daysOld);
+    final italic = FadeGranularity.isItalic(daysOld);
     final indicatorColor = _indicatorColor(p);
 
     return Opacity(
@@ -115,6 +120,16 @@ class InsightCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: p.bgSurface,
             borderRadius: BorderRadius.circular(16),
+            // NostalgiaEffect: glow gold tipis
+            boxShadow: nostalgiaActive
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFC18D52).withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
           ),
           clipBehavior: Clip.antiAlias,
           child: IntrinsicHeight(
@@ -149,11 +164,11 @@ class InsightCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // Title
+                        // Title — italic jika >28 hari
                         _buildText(
                           text: title,
                           fontSize: 20,
-                          fontStyle: FontStyle.normal,
+                          fontStyle: italic ? FontStyle.italic : FontStyle.normal,
                           color: p.textPrimary,
                           blurSigma: blurSigma,
                           lineHeight: 1.5,
@@ -163,7 +178,7 @@ class InsightCard extends StatelessWidget {
                           _buildText(
                             text: message,
                             fontSize: 15,
-                            fontStyle: FontStyle.italic,
+                            fontStyle: FontStyle.italic, // message selalu italic
                             color: p.textTertiary,
                             blurSigma: blurSigma,
                             lineHeight: 1.65,

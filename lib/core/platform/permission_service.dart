@@ -1,18 +1,22 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
-/// PermissionService — Komunikasi langsung dengan Android untuk permission.
+/// PermissionService — Komunikasi dengan Android untuk semua permission Luma.
 ///
-/// Menggunakan MethodChannel `luma/permissions` yang diimplementasikan
-/// di MainActivity.kt dengan AppOpsManager — lebih reliable dari
-/// `usage_stats` package dan menghindari dialog "Aplikasi ditolak aksesnya"
-/// dari OEM (Samsung, Xiaomi, dll).
+/// Dua jenis permission yang dikelola:
 ///
-/// Perbedaan kunci dari UsageStats.grantUsagePermission():
-/// - Membuka Settings langsung ke entry Luma (bukan halaman umum)
-/// - Menggunakan URI `package:com.tholteplok.luma` (Android 10+)
-/// - Tidak memicu dialog Play Protect / OEM restriction
+/// 1. PACKAGE_USAGE_STATS — restricted permission, harus grant manual di Settings.
+///    Menggunakan MethodChannel 'luma/permissions' → AppOpsManager di native.
+///    Menghindari dialog "Aplikasi ditolak aksesnya" dari OEM.
+///
+/// 2. POST_NOTIFICATIONS — runtime permission (Android 13+).
+///    Menggunakan permission_handler — dialog sistem standar.
+///    Android < 13: selalu granted (tidak perlu diminta).
 class PermissionService {
   static const _channel = MethodChannel('luma/permissions');
+
+  // ── Usage Stats (restricted permission) ────────────────────────────────────
 
   /// Cek apakah PACKAGE_USAGE_STATS sudah di-grant.
   /// Menggunakan AppOpsManager di native — lebih akurat dari Flutter package.
@@ -23,8 +27,7 @@ class PermissionService {
     } on PlatformException {
       return false;
     } on MissingPluginException {
-      // Desktop/non-Android — tidak didukung
-      return false;
+      return false; // Desktop/non-Android
     }
   }
 
@@ -38,5 +41,49 @@ class PermissionService {
     } on MissingPluginException {
       // Desktop — tidak ada yang perlu dilakukan
     }
+  }
+
+  // ── Notifications (runtime permission) ─────────────────────────────────────
+
+  /// Cek apakah POST_NOTIFICATIONS sudah di-grant.
+  /// Android < 13: selalu true (permission tidak ada di versi lama).
+  static Future<bool> hasNotificationPermission() async {
+    try {
+      if (defaultTargetPlatform != TargetPlatform.android) return true;
+      final status = await ph.Permission.notification.status;
+      return status.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Minta izin notifikasi — tampilkan dialog sistem standar Android.
+  /// Return true jika granted, false jika denied.
+  static Future<bool> requestNotificationPermission() async {
+    try {
+      if (defaultTargetPlatform != TargetPlatform.android) return true;
+      final status = await ph.Permission.notification.request();
+      return status.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Apakah user sudah pilih "Jangan tanya lagi" untuk notifikasi?
+  static Future<bool> isNotificationPermanentlyDenied() async {
+    try {
+      if (defaultTargetPlatform != TargetPlatform.android) return false;
+      final status = await ph.Permission.notification.status;
+      return status.isPermanentlyDenied;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Buka App Settings (untuk kasus permanently denied).
+  static Future<void> openSystemAppSettings() async {
+    try {
+      await ph.openAppSettings();
+    } catch (_) {}
   }
 }

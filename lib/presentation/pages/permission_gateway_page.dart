@@ -8,15 +8,12 @@ import '../widgets/outlined_ghost_button.dart';
 
 /// PermissionGatewayPage — Gerbang izin sebelum masuk ke home.
 ///
-/// Flow:
-/// 1. Cek permission yang sudah ada saat init
-/// 2. User tap item → buka Settings Android
-/// 3. App polling hasUsageStatsPermission() setiap 500ms saat kembali
-/// 4. Checkbox auto-check saat permission terdeteksi
-/// 5. Tombol LANJUT aktif saat app usage granted (Drive opsional)
+/// Permission yang diminta:
+/// 1. App Usage (WAJIB) — buka Settings manual, polling auto-check
+/// 2. Notifikasi (OPSIONAL) — dialog sistem standar Android 13+
 ///
-/// Ini adalah blocage yang necessary — tanpa app usage permission,
-/// Luma tidak bisa melihat apapun.
+/// Tombol LANJUT aktif hanya setelah App Usage granted.
+/// Notifikasi bisa di-skip.
 class PermissionGatewayPage extends StatefulWidget {
   final VoidCallback onPermissionsGranted;
 
@@ -32,8 +29,10 @@ class PermissionGatewayPage extends StatefulWidget {
 class _PermissionGatewayPageState extends State<PermissionGatewayPage>
     with WidgetsBindingObserver {
   bool _appUsageGranted = false;
-  bool _driveBackupGranted = false; // opsional
-  bool _isPolling = false;
+  bool _notificationGranted = false;
+  bool _isPollingUsage = false;
+  bool _isRequestingNotification = false;
+  bool _notificationPermanentlyDenied = false;
   Timer? _pollTimer;
 
   @override
@@ -50,32 +49,35 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
     super.dispose();
   }
 
-  /// Dipanggil saat app kembali ke foreground (dari Settings)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _isPolling) {
-      _startPolling();
+    if (state == AppLifecycleState.resumed) {
+      if (_isPollingUsage) _startPollingUsage();
+      // Re-check notifikasi saat kembali dari Settings (permanently denied case)
+      if (_notificationPermanentlyDenied) _recheckNotification();
     }
   }
 
-  /// Cek permission yang sudah ada saat pertama buka
   Future<void> _checkExistingPermissions() async {
-    final granted = await PermissionService.hasUsageStatsPermission();
+    final usageGranted = await PermissionService.hasUsageStatsPermission();
+    final notifGranted = await PermissionService.hasNotificationPermission();
     if (mounted) {
-      setState(() => _appUsageGranted = granted);
+      setState(() {
+        _appUsageGranted = usageGranted;
+        _notificationGranted = notifGranted;
+      });
     }
   }
 
-  /// User tap checkbox app usage → buka Settings
+  // ── App Usage ──────────────────────────────────────────────────────────────
+
   Future<void> _requestAppUsagePermission() async {
-    setState(() => _isPolling = true);
+    setState(() => _isPollingUsage = true);
     await PermissionService.openUsageAccessSettings();
-    // Polling dimulai saat app kembali ke foreground (via didChangeAppLifecycleState)
-    _startPolling();
+    _startPollingUsage();
   }
 
-  /// Poll setiap 500ms sampai permission granted atau max 20 detik
-  void _startPolling() {
+  void _startPollingUsage() {
     _pollTimer?.cancel();
     int attempts = 0;
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
@@ -85,13 +87,48 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
         timer.cancel();
         setState(() {
           _appUsageGranted = true;
-          _isPolling = false;
+          _isPollingUsage = false;
         });
       } else if (attempts >= 40) {
         timer.cancel();
-        if (mounted) setState(() => _isPolling = false);
+        if (mounted) setState(() => _isPollingUsage = false);
       }
     });
+  }
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+
+  Future<void> _requestNotificationPermission() async {
+    if (_notificationGranted) return;
+
+    // Jika permanently denied → buka App Settings
+    if (_notificationPermanentlyDenied) {
+      await PermissionService.openSystemAppSettings();
+      return;
+    }
+
+    setState(() => _isRequestingNotification = true);
+    final granted = await PermissionService.requestNotificationPermission();
+    final permanentlyDenied =
+        !granted && await PermissionService.isNotificationPermanentlyDenied();
+
+    if (mounted) {
+      setState(() {
+        _notificationGranted = granted;
+        _notificationPermanentlyDenied = permanentlyDenied;
+        _isRequestingNotification = false;
+      });
+    }
+  }
+
+  Future<void> _recheckNotification() async {
+    final granted = await PermissionService.hasNotificationPermission();
+    if (mounted && granted) {
+      setState(() {
+        _notificationGranted = true;
+        _notificationPermanentlyDenied = false;
+      });
+    }
   }
 
   bool get _canProceed => _appUsageGranted;
@@ -109,19 +146,18 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
           children: [
             // ── Orb visual ────────────────────────────────────────────────────
             SizedBox(
-              height: screenH * 0.30,
+              height: screenH * 0.28,
               child: Center(
                 child: AmbientOrb(
                   state: OrbState.dawn,
-                  size: screenH * 0.20,
-                  reduceMotion: false,
+                  size: screenH * 0.18,
                 ),
               ),
             ),
 
             // ── Konten ────────────────────────────────────────────────────────
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,37 +180,38 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
-                    // ── Permission item 1: App Usage (wajib) ─────────────────
+                    // ── Item 1: App Usage (wajib) ─────────────────────────────
                     _PermissionItem(
                       icon: Icons.phonelink_setup_outlined,
                       title: 'Akses ke daftar aplikasi',
                       subtitle: 'Luma melihat app apa saja yang kamu buka — '
                           'ini satu-satunya cara Luma bisa mengamati.',
                       isGranted: _appUsageGranted,
-                      isLoading: _isPolling && !_appUsageGranted,
+                      isLoading: _isPollingUsage && !_appUsageGranted,
                       isRequired: true,
                       onTap: _appUsageGranted ? null : _requestAppUsagePermission,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // ── Permission item 2: Google Drive (opsional) ───────────
+                    // ── Item 2: Notifikasi (opsional) ─────────────────────────
                     _PermissionItem(
-                      icon: Icons.cloud_upload_outlined,
-                      title: 'Cadangan di Google Drive',
-                      subtitle: 'Opsional — untuk backup insight dan pola kamu.',
-                      isGranted: _driveBackupGranted,
-                      isLoading: false,
+                      icon: Icons.notifications_outlined,
+                      title: 'Notifikasi insight',
+                      subtitle: _notificationPermanentlyDenied
+                          ? 'Buka Pengaturan untuk mengaktifkan notifikasi.'
+                          : 'Luma memberi tahu saat ada pola baru yang muncul.',
+                      isGranted: _notificationGranted,
+                      isLoading: _isRequestingNotification,
                       isRequired: false,
-                      onTap: _driveBackupGranted
+                      actionLabel: _notificationPermanentlyDenied
+                          ? 'Buka Pengaturan'
+                          : null,
+                      onTap: _notificationGranted
                           ? null
-                          : () {
-                              // Drive permission dihandle saat user tap backup
-                              // di Settings — tidak perlu diminta di sini
-                              setState(() => _driveBackupGranted = true);
-                            },
+                          : _requestNotificationPermission,
                     ),
                   ],
                 ),
@@ -183,7 +220,7 @@ class _PermissionGatewayPageState extends State<PermissionGatewayPage>
 
             // ── CTA ───────────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+              padding: const EdgeInsets.fromLTRB(28, 8, 28, 24),
               child: Column(
                 children: [
                   OutlinedGhostButton(
@@ -226,6 +263,7 @@ class _PermissionItem extends StatelessWidget {
   final bool isGranted;
   final bool isLoading;
   final bool isRequired;
+  final String? actionLabel; // override label arrow
   final VoidCallback? onTap;
 
   const _PermissionItem({
@@ -235,6 +273,7 @@ class _PermissionItem extends StatelessWidget {
     required this.isGranted,
     required this.isLoading,
     required this.isRequired,
+    this.actionLabel,
     this.onTap,
   });
 
@@ -245,9 +284,7 @@ class _PermissionItem extends StatelessWidget {
     final borderColor = isGranted
         ? p.gentleInd.withValues(alpha: 0.5)
         : p.borderSubtle;
-    final bgColor = isGranted
-        ? p.gentleBadgeBg
-        : Colors.transparent;
+    final bgColor = isGranted ? p.gentleBadgeBg : Colors.transparent;
 
     return GestureDetector(
       onTap: isGranted ? null : onTap,
@@ -298,12 +335,14 @@ class _PermissionItem extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: isGranted ? p.gentleText : p.textPrimary,
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: isGranted ? p.gentleText : p.textPrimary,
+                          ),
                         ),
                       ),
                       if (isRequired) ...[
@@ -325,6 +364,25 @@ class _PermissionItem extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ] else ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: p.bgElevated,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'OPSIONAL',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.5,
+                              color: p.textTertiary,
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -341,10 +399,19 @@ class _PermissionItem extends StatelessWidget {
               ),
             ),
 
-            // ── Arrow (hanya saat belum granted) ─────────────────────────────
+            // ── Trailing ─────────────────────────────────────────────────────
             if (!isGranted && !isLoading) ...[
               const SizedBox(width: 8),
-              Icon(Icons.arrow_forward_ios, size: 14, color: p.textSubtle),
+              actionLabel != null
+                  ? Text(
+                      actionLabel!,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 11,
+                        color: p.accent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    )
+                  : Icon(Icons.arrow_forward_ios, size: 14, color: p.textSubtle),
             ],
           ],
         ),

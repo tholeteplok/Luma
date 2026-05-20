@@ -1,36 +1,72 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:luma/domain/services/orb_state_engine.dart';
 
-/// Mood state untuk AmbientOrb — bukan penilaian, hanya cerminan
-enum AmbientMood {
-  focus,    // Fokus sedang/tinggi: biru tenang
-  gentle,   // Istirahat / self-compassion: hijau redup
-  shifting, // Transisi / perubahan ritme: ungu netral
-  rest,     // Tidak aktif / malam: ungu sangat gelap
+export 'package:luma/domain/services/orb_state_engine.dart' show OrbState;
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  VISUAL SPEC PER STATE
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//  Dawn  — 1-2 layer, blur tinggi (σ=24-28), opacity 0.4-0.55, napas lambat 6s
+//  Calm  — 3 layer konsentris, blur rendah (σ=10-16), opacity 0.55-0.75, stabil
+//  Wave  — 3-4 layer tumpang tindih, blur medium (σ=14-20), ripple cepat 3.5s
+//  Mist  — 2 layer, blur sangat tinggi (σ=28-36), opacity 0.30-0.40, napas 8s
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Konfigurasi visual satu state orb
+class _OrbConfig {
+  final List<_LayerSpec> layers;
+  final Duration breathDuration;
+  final double breathRangeOuter; // ± dari 1.0
+  final double breathRangeMid;
+  final double breathRangeInner;
+
+  const _OrbConfig({
+    required this.layers,
+    required this.breathDuration,
+    this.breathRangeOuter = 0.06,
+    this.breathRangeMid = 0.04,
+    this.breathRangeInner = 0.02,
+  });
 }
 
-/// AmbientOrb — Hero section visual Luma
-///
-/// Tiga lingkaran berlapis yang bernapas secara organik.
-/// Setiap layer punya fase napas berbeda (staggered) agar terasa hidup.
-///
-/// Perbaikan dari versi sebelumnya:
-/// - Staggered breathing: tiap layer punya fase sinus berbeda
-/// - Overflow fix: SizedBox diperbesar + ClipRect agar blur tidak terpotong
-/// - AnimatedSwitcher untuk transisi mood yang halus
-/// - reduceMotion support
-/// - Opacity lebih visible, rest mood lebih kontras
-class AmbientOrb extends StatefulWidget {
-  final AmbientMood mood;
-  final double size;
+class _LayerSpec {
+  final double sizeRatio;   // relatif terhadap orbSize
+  final Color color;
+  final double blurRadius;
+  final double opacity;
+  final Offset offset;      // untuk Wave: layer tumpang tindih
 
-  /// Jika true, animasi breathing dimatikan (aksesibilitas)
+  const _LayerSpec({
+    required this.sizeRatio,
+    required this.color,
+    required this.blurRadius,
+    required this.opacity,
+    this.offset = Offset.zero,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  AMBIENT ORB WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// AmbientOrb — Cermin visual ritme digital Luma.
+///
+/// Berevolusi perlahan berdasarkan pola perilaku:
+///   Dawn → Calm → Wave → Mist
+///
+/// Tidak ada label. Tidak ada angka. Hanya kehadiran.
+class AmbientOrb extends StatefulWidget {
+  final OrbState state;
+  final double size;
   final bool reduceMotion;
 
   const AmbientOrb({
     super.key,
-    this.mood = AmbientMood.focus,
+    this.state = OrbState.dawn,
     this.size = 160,
     this.reduceMotion = false,
   });
@@ -41,235 +77,365 @@ class AmbientOrb extends StatefulWidget {
 
 class _AmbientOrbState extends State<AmbientOrb>
     with SingleTickerProviderStateMixin {
-  late AnimationController _breatheController;
-
-  // Tiga animasi terpisah dengan fase berbeda — staggered breathing
-  late Animation<double> _breatheOuter;  // layer luar: fase 0
-  late Animation<double> _breatheMid;    // layer tengah: fase 120°
-  late Animation<double> _breatheInner;  // layer inti: fase 240°
+  late AnimationController _controller;
+  late List<Animation<double>> _scaleAnims;
+  late List<Animation<Offset>> _offsetAnims; // untuk Wave ripple
 
   @override
   void initState() {
     super.initState();
-
-    // Satu controller, tiga animasi dengan offset kurva berbeda
-    // Durasi 5s agar terasa lambat dan organik (bukan mekanis)
-    _breatheController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 5000),
+      duration: _configFor(widget.state).breathDuration,
     );
-
-    // Outer layer: scale 0.94 → 1.06 (range lebih besar, terasa "mengembang")
-    _breatheOuter = _buildBreathAnim(min: 0.94, max: 1.06, phaseOffset: 0.0);
-
-    // Mid layer: scale 0.96 → 1.04, fase 1/3 siklus terlambat
-    _breatheMid = _buildBreathAnim(min: 0.96, max: 1.04, phaseOffset: 1 / 3);
-
-    // Inner layer: scale 0.97 → 1.03, fase 2/3 siklus terlambat
-    _breatheInner = _buildBreathAnim(min: 0.97, max: 1.03, phaseOffset: 2 / 3);
-
-    if (!widget.reduceMotion) {
-      _breatheController.repeat();
-    }
-  }
-
-  /// Buat animasi napas dengan phase offset menggunakan TweenSequence
-  Animation<double> _buildBreathAnim({
-    required double min,
-    required double max,
-    required double phaseOffset,
-  }) {
-    return TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(begin: _lerpPhase(min, max, phaseOffset),
-                     end: max),
-        weight: (1.0 - phaseOffset) * 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: max, end: min),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: min,
-                     end: _lerpPhase(min, max, phaseOffset)),
-        weight: phaseOffset * 50,
-      ),
-    ]).animate(_breatheController);
-  }
-
-  double _lerpPhase(double min, double max, double phase) {
-    // Nilai awal berdasarkan posisi di siklus sinus
-    return min + (max - min) * (0.5 + 0.5 * math.sin(phase * 2 * math.pi));
+    _buildAnimations(widget.state);
+    if (!widget.reduceMotion) _controller.repeat();
   }
 
   @override
   void didUpdateWidget(AmbientOrb oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (widget.state != oldWidget.state) {
+      final newConfig = _configFor(widget.state);
+      _controller.duration = newConfig.breathDuration;
+      _buildAnimations(widget.state);
+      if (!widget.reduceMotion) _controller.repeat();
+    }
+
     if (widget.reduceMotion != oldWidget.reduceMotion) {
       if (widget.reduceMotion) {
-        _breatheController.stop();
+        _controller.stop();
       } else {
-        _breatheController.repeat();
+        _controller.repeat();
       }
     }
   }
 
-  @override
-  void dispose() {
-    _breatheController.dispose();
-    super.dispose();
+  void _buildAnimations(OrbState state) {
+    final cfg = _configFor(state);
+    final ranges = [cfg.breathRangeOuter, cfg.breathRangeMid, cfg.breathRangeInner];
+    final phaseOffsets = [0.0, 1 / 3, 2 / 3];
+
+    _scaleAnims = List.generate(
+      cfg.layers.length.clamp(1, 4),
+      (i) {
+        final range = i < ranges.length ? ranges[i] : cfg.breathRangeInner;
+        final phase = i < phaseOffsets.length ? phaseOffsets[i] : 0.0;
+        return _buildScaleAnim(range: range, phaseOffset: phase);
+      },
+    );
+
+    // Wave: layer ke-3 dan ke-4 punya offset horizontal yang berosilasi
+    if (state == OrbState.wave) {
+      _offsetAnims = [
+        _buildOffsetAnim(Offset.zero),
+        _buildOffsetAnim(Offset.zero),
+        _buildOffsetAnim(const Offset(0.12, 0.0)),  // bergeser kanan
+        _buildOffsetAnim(const Offset(-0.10, 0.06)), // bergeser kiri-bawah
+      ];
+    } else {
+      _offsetAnims = List.generate(
+        cfg.layers.length,
+        (_) => _buildOffsetAnim(Offset.zero),
+      );
+    }
   }
 
-  /// Tiga warna ambient berdasarkan mood
-  List<Color> _moodColors(AmbientMood mood) {
-    switch (mood) {
-      case AmbientMood.focus:
-        return const [
-          Color(0xFF3A5A8A), // lapis luar — biru dalam
-          Color(0xFF5050A0), // lapis tengah — indigo
-          Color(0xFF7070D0), // lapis inti — biru-ungu terang
-        ];
-      case AmbientMood.gentle:
-        return const [
-          Color(0xFF1E4A40), // lapis luar — hijau tua
-          Color(0xFF2E6A58), // lapis tengah
-          Color(0xFF5A9E8A), // lapis inti — teal terang
-        ];
-      case AmbientMood.shifting:
-        return const [
-          Color(0xFF3A2A5A), // lapis luar — ungu tua
-          Color(0xFF5A3A7A), // lapis tengah
-          Color(0xFF9A6AAA), // lapis inti — lavender
-        ];
-      case AmbientMood.rest:
-        // Rest lebih visible dari sebelumnya — pakai indigo gelap bukan hitam
-        return const [
-          Color(0xFF1A1A3A), // lapis luar
-          Color(0xFF252545), // lapis tengah
-          Color(0xFF353560), // lapis inti — cukup kontras dari bgBase
-        ];
+  Animation<double> _buildScaleAnim({
+    required double range,
+    required double phaseOffset,
+  }) {
+    final startVal = 1.0 - range + range * 2 *
+        (0.5 + 0.5 * math.sin(phaseOffset * 2 * math.pi));
+
+    return TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: startVal, end: 1.0 + range),
+        weight: (1.0 - phaseOffset) * 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0 + range, end: 1.0 - range),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0 - range, end: startVal),
+        weight: phaseOffset * 50,
+      ),
+    ]).animate(_controller);
+  }
+
+  Animation<Offset> _buildOffsetAnim(Offset maxOffset) {
+    if (maxOffset == Offset.zero) {
+      return ConstantTween<Offset>(Offset.zero).animate(_controller);
     }
+    return TweenSequence<Offset>([
+      TweenSequenceItem(
+        tween: Tween(begin: Offset.zero, end: maxOffset),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: maxOffset, end: Offset.zero),
+        weight: 50,
+      ),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final s = widget.size;
-    // Area lebih besar dari orb agar blur tidak terpotong di tepi
-    // Blur radius terbesar adalah 24px, jadi tambahkan 2× itu sebagai padding
-    final canvasSize = s + 48;
+    // Canvas lebih besar dari orb agar blur tidak terpotong
+    final canvasSize = s + 64;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
+      transitionBuilder: (child, anim) => FadeTransition(
+        opacity: anim,
         child: child,
       ),
       child: SizedBox(
-        key: ValueKey(widget.mood),
+        key: ValueKey(widget.state),
         width: canvasSize,
         height: canvasSize,
         child: widget.reduceMotion
-            ? _buildStaticOrb(s)
+            ? _buildStatic(s)
             : AnimatedBuilder(
-                animation: _breatheController,
-                builder: (context, _) => _buildAnimatedOrb(s),
+                animation: _controller,
+                builder: (_, child) => _buildAnimated(s),
               ),
       ),
     );
   }
 
-  Widget _buildStaticOrb(double s) {
-    final colors = _moodColors(widget.mood);
+  Widget _buildStatic(double s) {
+    final cfg = _configFor(widget.state);
     return Stack(
       alignment: Alignment.center,
-      children: [
-        _OrbLayer(size: s * 1.0,  color: colors[0], blurRadius: 24, opacity: 0.22),
-        _OrbLayer(size: s * 0.65, color: colors[1], blurRadius: 16, opacity: 0.35),
-        _OrbLayer(size: s * 0.35, color: colors[2], blurRadius: 10, opacity: 0.55),
-      ],
+      children: cfg.layers.map((layer) {
+        return _OrbLayer(
+          size: s * layer.sizeRatio,
+          color: layer.color,
+          blurRadius: layer.blurRadius,
+          opacity: layer.opacity,
+          offset: Offset.zero,
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildAnimatedOrb(double s) {
-    final colors = _moodColors(widget.mood);
+  Widget _buildAnimated(double s) {
+    final cfg = _configFor(widget.state);
     return Stack(
       alignment: Alignment.center,
-      children: [
-        // Layer luar — paling lambat, range terbesar
-        _OrbLayer(
-          size: s * _breatheOuter.value,
-          color: colors[0],
-          blurRadius: 24,
-          opacity: 0.22,
-        ),
-        // Layer tengah — fase 1/3 terlambat
-        _OrbLayer(
-          size: s * 0.65 * _breatheMid.value,
-          color: colors[1],
-          blurRadius: 16,
-          opacity: 0.35,
-        ),
-        // Layer inti — fase 2/3 terlambat, paling jelas
-        _OrbLayer(
-          size: s * 0.35 * _breatheInner.value,
-          color: colors[2],
-          blurRadius: 10,
-          opacity: 0.55,
-        ),
-      ],
+      children: List.generate(cfg.layers.length, (i) {
+        final layer = cfg.layers[i];
+        final scale = i < _scaleAnims.length ? _scaleAnims[i].value : 1.0;
+        final offset = i < _offsetAnims.length
+            ? _offsetAnims[i].value * s
+            : Offset.zero;
+        return _OrbLayer(
+          size: s * layer.sizeRatio * scale,
+          color: layer.color,
+          blurRadius: layer.blurRadius,
+          opacity: layer.opacity,
+          offset: offset,
+        );
+      }),
     );
   }
 }
 
-/// Satu lapisan orb (blurred circle)
+// ─────────────────────────────────────────────────────────────────────────────
+//  LAYER WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _OrbLayer extends StatelessWidget {
   final double size;
   final Color color;
   final double blurRadius;
   final double opacity;
+  final Offset offset;
 
   const _OrbLayer({
     required this.size,
     required this.color,
     required this.blurRadius,
     required this.opacity,
+    this.offset = Offset.zero,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(
-        sigmaX: blurRadius,
-        sigmaY: blurRadius,
-        // clamp agar blur tidak "bocor" ke luar batas widget
-        tileMode: TileMode.clamp,
-      ),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color.withValues(alpha: opacity),
+    return Transform.translate(
+      offset: offset,
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(
+          sigmaX: blurRadius,
+          sigmaY: blurRadius,
+          tileMode: TileMode.clamp,
+        ),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withValues(alpha: opacity),
+          ),
         ),
       ),
     );
   }
 }
 
-/// Helper: map insight severity ke AmbientMood
-AmbientMood moodFromSeverity(String severity) {
-  switch (severity.toLowerCase()) {
-    case 'gentle':
-    case 'positive':
-      return AmbientMood.gentle;
-    case 'notice':
-    case 'warning':
-    case 'critical':
-      return AmbientMood.shifting;
-    case 'info':
-    default:
-      return AmbientMood.focus;
-  }
+// ─────────────────────────────────────────────────────────────────────────────
+//  VISUAL CONFIG PER STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+_OrbConfig _configFor(OrbState state) {
+  return switch (state) {
+    // ── Dawn: 2 layer, blur tinggi, napas lambat 6s ──────────────────────────
+    OrbState.dawn => const _OrbConfig(
+        breathDuration: Duration(milliseconds: 6000),
+        breathRangeOuter: 0.07,
+        breathRangeMid: 0.04,
+        breathRangeInner: 0.02,
+        layers: [
+          _LayerSpec(
+            sizeRatio: 0.90,
+            color: Color(0xFF2A2A5A), // indigo redup
+            blurRadius: 28,
+            opacity: 0.40,
+          ),
+          _LayerSpec(
+            sizeRatio: 0.45,
+            color: Color(0xFF3A3A7A), // indigo sedikit lebih terang
+            blurRadius: 20,
+            opacity: 0.50,
+          ),
+        ],
+      ),
+
+    // ── Calm: 3 layer konsentris, blur rendah, stabil ────────────────────────
+    OrbState.calm => const _OrbConfig(
+        breathDuration: Duration(milliseconds: 5000),
+        breathRangeOuter: 0.05,
+        breathRangeMid: 0.03,
+        breathRangeInner: 0.02,
+        layers: [
+          _LayerSpec(
+            sizeRatio: 1.00,
+            color: Color(0xFF3A5A8A), // biru dalam
+            blurRadius: 16,
+            opacity: 0.55,
+          ),
+          _LayerSpec(
+            sizeRatio: 0.65,
+            color: Color(0xFF5050A0), // indigo
+            blurRadius: 12,
+            opacity: 0.65,
+          ),
+          _LayerSpec(
+            sizeRatio: 0.35,
+            color: Color(0xFF7070D0), // biru-ungu terang
+            blurRadius: 8,
+            opacity: 0.75,
+          ),
+        ],
+      ),
+
+    // ── Wave: 4 layer tumpang tindih, ripple cepat 3.5s ─────────────────────
+    OrbState.wave => const _OrbConfig(
+        breathDuration: Duration(milliseconds: 3500),
+        breathRangeOuter: 0.08,
+        breathRangeMid: 0.06,
+        breathRangeInner: 0.05,
+        layers: [
+          _LayerSpec(
+            sizeRatio: 0.90,
+            color: Color(0xFF3A2A5A), // ungu tua
+            blurRadius: 20,
+            opacity: 0.45,
+          ),
+          _LayerSpec(
+            sizeRatio: 0.65,
+            color: Color(0xFF5A3A7A), // ungu medium
+            blurRadius: 16,
+            opacity: 0.50,
+          ),
+          _LayerSpec(
+            sizeRatio: 0.50,
+            color: Color(0xFF7A4A9A), // ungu lebih terang
+            blurRadius: 14,
+            opacity: 0.45,
+            offset: Offset(0.12, 0.0), // tumpang tindih kanan
+          ),
+          _LayerSpec(
+            sizeRatio: 0.40,
+            color: Color(0xFF9A6AAA), // lavender
+            blurRadius: 12,
+            opacity: 0.40,
+            offset: Offset(-0.10, 0.06), // tumpang tindih kiri-bawah
+          ),
+        ],
+      ),
+
+    // ── Mist: 2 layer, blur sangat tinggi, napas sangat lambat 8s ───────────
+    OrbState.mist => const _OrbConfig(
+        breathDuration: Duration(milliseconds: 8000),
+        breathRangeOuter: 0.03,
+        breathRangeMid: 0.02,
+        breathRangeInner: 0.01,
+        layers: [
+          _LayerSpec(
+            sizeRatio: 1.00,
+            color: Color(0xFF4A4A6A), // abu-abu kebiruan
+            blurRadius: 36,
+            opacity: 0.30,
+          ),
+          _LayerSpec(
+            sizeRatio: 0.55,
+            color: Color(0xFF5A5A7A), // sedikit lebih terang
+            blurRadius: 28,
+            opacity: 0.38,
+          ),
+        ],
+      ),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  LEGACY COMPAT — untuk kode yang masih pakai AmbientMood
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// @deprecated Gunakan OrbState langsung.
+/// Dipertahankan agar tidak ada breaking change di kode lain.
+@Deprecated('Gunakan OrbState. AmbientMood akan dihapus di versi berikutnya.')
+enum AmbientMood { focus, gentle, shifting, rest }
+
+/// @deprecated
+@Deprecated('Gunakan OrbState langsung.')
+OrbState orbStateFromMood(AmbientMood mood) {
+  return switch (mood) {
+    AmbientMood.focus => OrbState.calm,
+    AmbientMood.gentle => OrbState.dawn,
+    AmbientMood.shifting => OrbState.wave,
+    AmbientMood.rest => OrbState.mist,
+  };
+}
+
+/// Helper: map insight severity ke OrbState (untuk fallback saat engine belum siap)
+OrbState orbStateFromSeverity(String severity) {
+  return switch (severity.toLowerCase()) {
+    'gentle' || 'positive' => OrbState.calm,
+    'notice' || 'warning' || 'critical' => OrbState.wave,
+    _ => OrbState.calm,
+  };
 }

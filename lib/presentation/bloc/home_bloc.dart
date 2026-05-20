@@ -10,7 +10,9 @@ import 'package:luma/domain/services/dimension_rotation.dart';
 import 'package:luma/domain/services/insight_language_engine.dart';
 import 'package:luma/domain/services/insight_memory.dart';
 import 'package:luma/domain/services/insight_orchestrator.dart';
+import 'package:luma/domain/services/orb_state_engine.dart';
 import 'package:luma/core/utils/luma_language.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Home page state management
 class HomeState {
@@ -45,6 +47,9 @@ class HomeState {
   /// UI akan render [FirstInsightCard] alih-alih [InsightCard] biasa.
   final bool isFirstInsight;
 
+  /// State orb adaptif — berevolusi berdasarkan pola perilaku.
+  final OrbState orbState;
+
   const HomeState({
     this.isLoading = false,
     this.error,
@@ -57,6 +62,7 @@ class HomeState {
     this.activeDimension = InsightDimension.morningRhythm,
     this.depth = DepthLevel.surface,
     this.isFirstInsight = false,
+    this.orbState = OrbState.dawn,
   });
 
   HomeState copyWith({
@@ -72,6 +78,7 @@ class HomeState {
     InsightDimension? activeDimension,
     DepthLevel? depth,
     bool? isFirstInsight,
+    OrbState? orbState,
   }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
@@ -85,6 +92,7 @@ class HomeState {
       activeDimension: activeDimension ?? this.activeDimension,
       depth: depth ?? this.depth,
       isFirstInsight: isFirstInsight ?? this.isFirstInsight,
+      orbState: orbState ?? this.orbState,
     );
   }
 }
@@ -116,6 +124,7 @@ class HomeNotifier extends ChangeNotifier {
   bool get hasUsagePermission => _state.hasUsagePermission;
   bool get isSilent => _state.isSilent;
   bool get isFirstInsight => _state.isFirstInsight;
+  OrbState get orbState => _state.orbState;
   InsightDimension get activeDimension => _state.activeDimension;
   DepthLevel get depth => _state.depth;
 
@@ -221,6 +230,10 @@ class HomeNotifier extends ChangeNotifier {
         previousSnapshot: previousSnapshot,
       );
 
+      // 10b. Evaluasi OrbState adaptif
+      final prefs = await SharedPreferences.getInstance();
+      final newOrbState = await OrbStateEngine.evaluate(snapshot, prefs);
+
       // 11. Hitung severity context (budget mingguan)
       final isFirstInsight = baselineDays < 3;
       var severityCtx = SeverityContext(daysOfData: baselineDays);
@@ -262,6 +275,7 @@ class HomeNotifier extends ChangeNotifier {
         history: historyMaps,
         isSilent: decision.isSilent,
         isFirstInsight: isFirstInsight,
+        orbState: newOrbState,
         activeDimension: decision.activeDimension,
         depth: decision.depth,
         todaySummary: todayDb != null

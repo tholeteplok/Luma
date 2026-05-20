@@ -5,8 +5,7 @@ import '../bloc/home_bloc.dart';
 import '../bloc/theme_bloc.dart';
 import '../bloc/settings_bloc.dart';
 import '../widgets/ambient_orb.dart';
-import '../widgets/first_insight_card.dart';
-import '../widgets/insight_card.dart';
+import '../widgets/first_insight_card.dart';import '../widgets/insight_card.dart';
 import '../widgets/luma_app_header.dart';
 import '../painters/fading_line_painter.dart';
 import '../../core/themes/colors.dart';
@@ -31,13 +30,6 @@ class _HomePageState extends State<HomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeNotifier>().loadData();
     });
-  }
-
-  AmbientMood _orbMood(HomeNotifier homeState) {
-    if (homeState.isSilent) return AmbientMood.gentle;
-    if (homeState.insights.isEmpty) return AmbientMood.rest;
-    final top = homeState.insights.first['severity'] as String? ?? 'info';
-    return moodFromSeverity(top);
   }
 
   @override
@@ -109,7 +101,7 @@ class _HomePageState extends State<HomePage> {
       height: orbAreaH,
       child: Center(
         child: AmbientOrb(
-          mood: _orbMood(homeState),
+          state: homeState.orbState,
           size: orbSize,
           reduceMotion: reduceMotion,
         ),

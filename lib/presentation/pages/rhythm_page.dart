@@ -108,6 +108,9 @@ class _TimelineCard extends StatelessWidget {
             weeklyData: home.weeklyData,
             height: 96,
             reduceMotion: reduceMotion,
+            baselineDays: home.weeklyData
+                .where((d) => (d['screenTimeSeconds'] as int? ?? 0) > 0)
+                .length,
           ),
         ],
       ),

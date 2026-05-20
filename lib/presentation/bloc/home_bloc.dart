@@ -359,6 +359,7 @@ class HomeNotifier extends ChangeNotifier {
           .map((s) => {
                 'date': s.date,
                 'screenTimeSeconds': s.totalScreenTimeSeconds,
+                'focusScore': s.focusScore, // 0–100, dipakai painter
               })
           .toList();
     } catch (_) {
@@ -372,6 +373,7 @@ class HomeNotifier extends ChangeNotifier {
       return {
         'date': DateTime.now().subtract(Duration(days: 6 - i)),
         'screenTimeSeconds': 0,
+        'focusScore': 0.0,
       };
     });
   }

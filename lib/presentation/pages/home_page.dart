@@ -142,6 +142,9 @@ class _HomePageState extends State<HomePage> {
             weeklyData: homeState.weeklyData,
             height: 60,
             reduceMotion: reduceMotion,
+            baselineDays: homeState.weeklyData
+                .where((d) => (d['screenTimeSeconds'] as int? ?? 0) > 0)
+                .length,
           ),
         ],
       ),

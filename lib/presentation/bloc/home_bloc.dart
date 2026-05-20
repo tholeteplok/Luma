@@ -4,6 +4,7 @@ import 'package:luma/data/db/models/daily_summary_model.dart';
 import 'package:luma/data/tracking/usage_stats_service.dart';
 import 'package:luma/domain/entities/behavior_snapshot.dart';
 import 'package:luma/domain/entities/insight_id.dart';
+import 'package:luma/domain/rules/severity_selector.dart';
 import 'package:luma/domain/services/app_category_classifier.dart';
 import 'package:luma/domain/services/dimension_rotation.dart';
 import 'package:luma/domain/services/insight_language_engine.dart';
@@ -40,6 +41,10 @@ class HomeState {
   /// Kedalaman observasi aktif (surface / pattern / relationship / longitudinal)
   final DepthLevel depth;
 
+  /// True jika ini adalah insight pertama user (hari 1–3).
+  /// UI akan render [FirstInsightCard] alih-alih [InsightCard] biasa.
+  final bool isFirstInsight;
+
   const HomeState({
     this.isLoading = false,
     this.error,
@@ -51,6 +56,7 @@ class HomeState {
     this.isSilent = false,
     this.activeDimension = InsightDimension.morningRhythm,
     this.depth = DepthLevel.surface,
+    this.isFirstInsight = false,
   });
 
   HomeState copyWith({
@@ -65,6 +71,7 @@ class HomeState {
     bool? isSilent,
     InsightDimension? activeDimension,
     DepthLevel? depth,
+    bool? isFirstInsight,
   }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
@@ -77,6 +84,7 @@ class HomeState {
       isSilent: isSilent ?? this.isSilent,
       activeDimension: activeDimension ?? this.activeDimension,
       depth: depth ?? this.depth,
+      isFirstInsight: isFirstInsight ?? this.isFirstInsight,
     );
   }
 }
@@ -107,6 +115,7 @@ class HomeNotifier extends ChangeNotifier {
   List<Map<String, dynamic>> get weeklyData => _state.weeklyData;
   bool get hasUsagePermission => _state.hasUsagePermission;
   bool get isSilent => _state.isSilent;
+  bool get isFirstInsight => _state.isFirstInsight;
   InsightDimension get activeDimension => _state.activeDimension;
   DepthLevel get depth => _state.depth;
 
@@ -212,8 +221,31 @@ class HomeNotifier extends ChangeNotifier {
         previousSnapshot: previousSnapshot,
       );
 
-      // 11. Convert LumaInsight → Map untuk UI
-      final insightMaps = decision.insights.map(_insightToMap).toList();
+      // 11. Hitung severity context (budget mingguan)
+      final isFirstInsight = baselineDays < 3;
+      var severityCtx = SeverityContext(daysOfData: baselineDays);
+
+      // 11a. Convert LumaInsight → Map dengan SeveritySelector
+      final insightMaps = decision.insights.map((insight) {
+        final significant = SeveritySelector.isSignificantChange(
+          snapshot,
+          previousSnapshot,
+        );
+        final severity = SeveritySelector.select(
+          tone: insight.tone,
+          daysOfData: baselineDays,
+          warningsThisWeek: severityCtx.warningsThisWeek,
+          noticesThisWeek: severityCtx.noticesThisWeek,
+          isSignificantChange: significant,
+        );
+        // Update budget counter
+        if (severity == InsightSeverity.warning) {
+          severityCtx = severityCtx.incrementWarning();
+        } else if (severity == InsightSeverity.notice) {
+          severityCtx = severityCtx.incrementNotice();
+        }
+        return _insightToMap(insight, severity);
+      }).toList();
 
       // 11b. History — selalu dibawa, dipakai saat silent
       final historyMaps = (_memory?.getHistory() ?? const [])
@@ -229,6 +261,7 @@ class HomeNotifier extends ChangeNotifier {
         insights: insightMaps,
         history: historyMaps,
         isSilent: decision.isSilent,
+        isFirstInsight: isFirstInsight,
         activeDimension: decision.activeDimension,
         depth: decision.depth,
         todaySummary: todayDb != null
@@ -309,14 +342,14 @@ class HomeNotifier extends ChangeNotifier {
   // Mappers
   // ──────────────────────────────────────────────────────────────
 
-  Map<String, dynamic> _insightToMap(LumaInsight insight) {
+  Map<String, dynamic> _insightToMap(LumaInsight insight, InsightSeverity severity) {
     return {
       'id': insight.id.name,
       'insightId': insight.id.name,
       'title': insight.phrase,
       'message': insight.subPhrase ?? '',
       'tone': insight.tone.name,
-      'severity': _severityFromTone(insight.tone),
+      'severity': SeveritySelector.toCardSeverity(severity),
       'depth': insight.depth.name,
       'timestamp': DateTime.now(),
     };
@@ -334,7 +367,7 @@ class HomeNotifier extends ChangeNotifier {
     };
   }
 
-  /// Map InsightTone → severity string yang dikenal InsightCard / orb.
+  /// Map InsightTone → severity string (fallback untuk history records).
   String _severityFromTone(InsightTone tone) {
     return switch (tone) {
       InsightTone.calm => 'gentle',

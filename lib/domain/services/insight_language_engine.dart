@@ -5,6 +5,7 @@ import 'package:luma/domain/entities/behavior_snapshot.dart';
 import 'package:luma/domain/entities/insight_id.dart';
 import 'package:luma/domain/services/app_category_classifier.dart';
 import 'package:luma/domain/services/dimension_rotation.dart';
+import 'package:luma/domain/validators/nvc_validator.dart';
 
 /// InsightLanguageEngine — Jantung dari filosofi Luma.
 ///
@@ -74,6 +75,7 @@ class InsightLanguageEngine {
   /// tanpa filter cooldown / dimensi (itu tugas orchestrator).
   ///
   /// Setiap kandidat sudah ditag [InsightId] dan [DepthLevel].
+  /// Setiap kandidat divalidasi NVC — yang tidak lolos diganti fallback.
   List<LumaInsight> generateCandidates(
     BehaviorSnapshot snapshot, {
     DepthLevel depth = DepthLevel.surface,
@@ -85,15 +87,33 @@ class InsightLanguageEngine {
     final candidates = <LumaInsight>[];
 
     final primary = _generatePrimaryInsight(snapshot, depth);
-    if (primary != null) candidates.add(primary);
+    if (primary != null) candidates.add(_validated(primary));
 
     final temporal = _generateTemporalInsight(snapshot, depth);
-    if (temporal != null) candidates.add(temporal);
+    if (temporal != null) candidates.add(_validated(temporal));
 
     final rhythm = _generateRhythmInsight(snapshot, depth);
-    if (rhythm != null) candidates.add(rhythm);
+    if (rhythm != null) candidates.add(_validated(rhythm));
 
     return candidates;
+  }
+
+  /// Validasi satu insight — jika tidak lolos NVC, kembalikan fallback.
+  LumaInsight _validated(LumaInsight insight) {
+    final result = NVCValidator.validateInsight(
+      insight.phrase,
+      insight.subPhrase,
+      language,
+      isFirstInsight: insight.depth == DepthLevel.surface,
+    );
+    if (result.isValid) return insight;
+    // Tidak lolos → fallback dengan tone yang sama
+    return LumaInsight(
+      id: insight.id,
+      depth: insight.depth,
+      tone: insight.tone,
+      phrase: NVCValidator.getFallback(language),
+    );
   }
 
   /// API lama — dipertahankan untuk kompatibilitas.

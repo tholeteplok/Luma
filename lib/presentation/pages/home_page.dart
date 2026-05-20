@@ -5,6 +5,7 @@ import '../bloc/home_bloc.dart';
 import '../bloc/theme_bloc.dart';
 import '../bloc/settings_bloc.dart';
 import '../widgets/ambient_orb.dart';
+import '../widgets/first_insight_card.dart';
 import '../widgets/insight_card.dart';
 import '../widgets/luma_app_header.dart';
 import '../painters/fading_line_painter.dart';
@@ -243,6 +244,16 @@ class _HomePageState extends State<HomePage> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final insight = homeState.insights[index];
+            // First insight (hari 1–3): widget khusus tanpa badge/feedback
+            if (homeState.isFirstInsight) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: FirstInsightCard(
+                  title: insight['title'] as String? ?? '',
+                  subtitle: insight['message'] as String? ?? '',
+                ),
+              );
+            }
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: InsightCard(

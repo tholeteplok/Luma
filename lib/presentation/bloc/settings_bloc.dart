@@ -211,11 +211,13 @@ class SettingsNotifier extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
+        // null bisa berarti: sign-in dibatalkan, atau error teknis
+        // DriveBackupManager sudah log detail — tampilkan pesan umum
         _state = _state.copyWith(
           isBackingUp: false,
           error: languageCode == 'id'
-              ? 'Backup gagal. Coba lagi nanti.'
-              : 'Backup failed. Please try again.',
+              ? 'Backup gagal. Pastikan kamu sudah masuk ke akun Google.'
+              : 'Backup failed. Make sure you are signed in to Google.',
         );
         notifyListeners();
         return false;
@@ -223,7 +225,9 @@ class SettingsNotifier extends ChangeNotifier {
     } catch (e) {
       _state = _state.copyWith(
         isBackingUp: false,
-        error: e.toString(),
+        error: languageCode == 'id'
+            ? 'Backup gagal: ${_friendlyError(e)}'
+            : 'Backup failed: ${_friendlyError(e)}',
       );
       notifyListeners();
       return false;
@@ -270,7 +274,12 @@ class SettingsNotifier extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _state = _state.copyWith(isRestoring: false, error: e.toString());
+      _state = _state.copyWith(
+        isRestoring: false,
+        error: languageCode == 'id'
+            ? 'Restore gagal: ${_friendlyError(e)}'
+            : 'Restore failed: ${_friendlyError(e)}',
+      );
       notifyListeners();
       return false;
     }
@@ -287,6 +296,21 @@ class SettingsNotifier extends ChangeNotifier {
   }
 
   // ─────────────────────── INTERNAL ───────────────────────
+
+  /// Terjemahkan exception ke pesan yang ramah user
+  String _friendlyError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('network') || msg.contains('socket') || msg.contains('connection')) {
+      return languageCode == 'id' ? 'Periksa koneksi internet.' : 'Check your internet connection.';
+    }
+    if (msg.contains('unauthorized') || msg.contains('401') || msg.contains('forbidden')) {
+      return languageCode == 'id' ? 'Sesi Google habis. Coba lagi.' : 'Google session expired. Try again.';
+    }
+    if (msg.contains('quota') || msg.contains('storage')) {
+      return languageCode == 'id' ? 'Penyimpanan Drive penuh.' : 'Drive storage is full.';
+    }
+    return languageCode == 'id' ? 'Coba lagi nanti.' : 'Please try again later.';
+  }
 
   /// Persist preferences ke Isar
   Future<void> _persistPreferences() async {

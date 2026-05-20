@@ -7,6 +7,7 @@ import '../db/database_service.dart';
 import '../db/models/models.dart';
 import '../encryption/encryption_service.dart';
 import '../sync/drive_key_manager.dart';
+import '../sync/google_auth_service.dart';
 
 /// Representasi metadata satu file backup di Drive
 class BackupEntry {
@@ -45,16 +46,56 @@ class DriveBackupManager {
   final DatabaseService _db = DatabaseService();
   final EncryptionService _encryption = EncryptionService();
   final DriveKeyManager _keyManager = DriveKeyManager();
+  final GoogleAuthService _auth = GoogleAuthService();
 
   drive.DriveApi? _driveApi;
   bool _isInitialized = false;
 
-  /// Inisialisasi dengan authenticated client
+  /// Inisialisasi dengan authenticated client (manual — untuk testing / background task)
   Future<void> initialize(auth.AuthClient authClient) async {
     _driveApi = drive.DriveApi(authClient);
     await _keyManager.initialize(authClient);
     _isInitialized = true;
-    debugPrint('[DriveBackupManager] Initialized');
+    debugPrint('[DriveBackupManager] Initialized (manual)');
+  }
+
+  /// Auto-initialize via GoogleAuthService.
+  /// Menampilkan dialog sign-in jika belum sign-in.
+  /// Return false jika user membatalkan atau terjadi error.
+  Future<bool> initializeWithSignIn() async {
+    try {
+      // Coba silent dulu
+      var client = await _auth.signInSilently();
+      // Jika tidak ada session, tampilkan dialog
+      client ??= await _auth.signIn();
+
+      if (client == null) {
+        debugPrint('[DriveBackupManager] Sign-in gagal atau dibatalkan');
+        return false;
+      }
+
+      await initialize(client);
+      return true;
+    } catch (e) {
+      debugPrint('[DriveBackupManager] initializeWithSignIn error: $e');
+      return false;
+    }
+  }
+
+  /// Pastikan sudah terinisialisasi — refresh auth jika perlu.
+  /// Dipanggil di awal setiap operasi backup/restore/list.
+  Future<bool> _ensureInitialized() async {
+    if (_isInitialized) {
+      // Cek apakah token masih valid, refresh jika perlu
+      final freshClient = await _auth.getAuthClient();
+      if (freshClient != null) {
+        // Selalu update DriveApi dengan client terbaru (token mungkin di-refresh)
+        _driveApi = drive.DriveApi(freshClient);
+        await _keyManager.initialize(freshClient);
+      }
+      return true;
+    }
+    return initializeWithSignIn();
   }
 
   bool get isInitialized => _isInitialized;
@@ -64,8 +105,9 @@ class DriveBackupManager {
   /// Backup seluruh data yang diperlukan ke Google Drive
   /// Returns: nama file backup yang dibuat, atau null jika gagal
   Future<String?> backup() async {
-    if (!_isInitialized || _driveApi == null) {
-      debugPrint('[DriveBackupManager] Not initialized');
+    final ready = await _ensureInitialized();
+    if (!ready || _driveApi == null) {
+      debugPrint('[DriveBackupManager] Tidak bisa initialize — backup dibatalkan');
       return null;
     }
 
@@ -163,8 +205,9 @@ class DriveBackupManager {
   /// Restore dari file backup tertentu (by fileId)
   /// PERINGATAN: Ini MENGGANTI data yang ada, tidak bisa merge.
   Future<bool> restore(String fileId) async {
-    if (!_isInitialized || _driveApi == null) {
-      debugPrint('[DriveBackupManager] Not initialized');
+    final ready = await _ensureInitialized();
+    if (!ready || _driveApi == null) {
+      debugPrint('[DriveBackupManager] Tidak bisa initialize — restore dibatalkan');
       return false;
     }
 
@@ -255,7 +298,8 @@ class DriveBackupManager {
 
   /// List semua backup yang tersedia di Drive
   Future<List<BackupEntry>> listBackups() async {
-    if (!_isInitialized || _driveApi == null) return [];
+    final ready = await _ensureInitialized();
+    if (!ready || _driveApi == null) return [];
 
     try {
       final result = await _driveApi!.files.list(
@@ -282,7 +326,8 @@ class DriveBackupManager {
 
   /// Hapus satu backup dari Drive
   Future<bool> deleteBackup(String fileId) async {
-    if (!_isInitialized || _driveApi == null) return false;
+    final ready = await _ensureInitialized();
+    if (!ready || _driveApi == null) return false;
     try {
       await _driveApi!.files.delete(fileId);
       debugPrint('[DriveBackupManager] Deleted backup $fileId');
@@ -329,7 +374,7 @@ class DriveBackupManager {
     'templateId': i.templateId,
     'templateParamsJson': i.templateParamsJson,
     'renderedText': i.renderedText,
-    'severity': i.severity.index,
+    'severity': i.severity.name, // string, bukan index — aman saat enum berubah urutan
     'isRead': i.isRead,
     'isDismissed': i.isDismissed,
     'expiresAt': i.expiresAt.toIso8601String(),
@@ -337,13 +382,27 @@ class DriveBackupManager {
   };
 
   Insight _insightFromMap(Map<String, dynamic> m) {
+    // Parse severity dari string (backward compat: fallback ke index jika int)
+    InsightSeverity parseSeverity(dynamic raw) {
+      if (raw is String) {
+        return InsightSeverity.values.firstWhere(
+          (e) => e.name == raw,
+          orElse: () => InsightSeverity.info,
+        );
+      }
+      if (raw is int && raw < InsightSeverity.values.length) {
+        return InsightSeverity.values[raw];
+      }
+      return InsightSeverity.info;
+    }
+
     final insight = Insight()
       ..createdAt = DateTime.parse(m['createdAt'] as String)
       ..category = m['category'] as String
       ..templateId = m['templateId'] as String
       ..templateParamsJson = m['templateParamsJson'] as String?
       ..renderedText = m['renderedText'] as String
-      ..severity = InsightSeverity.values[m['severity'] as int]
+      ..severity = parseSeverity(m['severity'])
       ..isRead = m['isRead'] as bool? ?? false
       ..isDismissed = m['isDismissed'] as bool? ?? false
       ..expiresAt = DateTime.parse(m['expiresAt'] as String)

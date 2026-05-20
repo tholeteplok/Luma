@@ -84,6 +84,14 @@ enum WeeklyRhythmState {
 }
 ```
 
+**Sumber data: `DailySummary.focusScore` (0–100) dari DB — sudah ada, tidak perlu schema migration.**
+
+Mapping per hari: `focusScore > 60` → "focused", `focusScore < 35` → "scattered", sisanya "moderate".
+`WeeklyRhythmCalculator` menerima `List<DailySummary>` dari `DatabaseService.getDailySummariesBetween()`
+yang sudah dipanggil di `HomeNotifier.loadData()` — tidak ada query tambahan.
+
+Ini lebih akurat dari consecutive days (hanya melihat streak) karena melihat distribusi penuh 7 hari.
+
 ---
 
 ## Palette Keputusan

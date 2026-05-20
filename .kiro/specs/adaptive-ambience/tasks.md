@@ -41,15 +41,18 @@ dan tidak merusak fungsionalitas yang sudah ada.
 ### Task 1.3 — WeeklyRhythmState Calculator
 **File baru:** `lib/domain/services/weekly_rhythm_calculator.dart`
 
-- [ ] Buat `WeeklyRhythmCalculator.compute(List<SwitchFrequency> history)` → `WeeklyRhythmState`
-- [ ] `clear`: focused ≥60% dari 7 hari
-- [ ] `dim`: scattered ≥60% dari 7 hari
-- [ ] `stable`: variasi rendah (max 1 perubahan dalam 7 hari)
-- [ ] `undulating`: bergantian focused-scattered ≥3 kali dalam 7 hari
-- [ ] Guard: jika data <5 hari, return state sebelumnya
-- [ ] Persist history ke `luma_ambience_rhythm_history` (JSON array, max 7 entries)
+**Sumber data:** `DailySummary.focusScore` dari DB — tidak perlu schema migration.
+`focusScore > 60` → focused, `focusScore < 35` → scattered, sisanya moderate.
 
-**Acceptance:** Unit test — 5 hari focused + 2 hari scattered → `clear`.
+- [ ] Buat `WeeklyRhythmCalculator.compute(List<DailySummary> last7Days)` → `WeeklyRhythmState`
+- [ ] `clear`: hari dengan `focusScore > 60` ≥ 4 dari 7 hari (≥60%)
+- [ ] `dim`: hari dengan `focusScore < 35` ≥ 4 dari 7 hari (≥60%)
+- [ ] `stable`: variasi rendah — max 1 perubahan kategori (focused↔scattered) dalam 7 hari
+- [ ] `undulating`: bergantian focused-scattered ≥3 kali dalam 7 hari
+- [ ] Guard: jika `last7Days.length < 5`, return state sebelumnya dari SharedPrefs
+- [ ] `last7Days` diambil dari `HomeNotifier.loadData()` yang sudah query DB — tidak ada query tambahan
+
+**Acceptance:** 5 hari `focusScore=75` + 2 hari `focusScore=20` → `clear` (5/7 ≥ 60%).
 
 ---
 
@@ -70,10 +73,11 @@ dan tidak merusak fungsionalitas yang sudah ada.
 ### Task 1.5 — AdaptiveAmbienceEngine
 **File baru:** `lib/domain/services/adaptive_ambience_engine.dart`
 
-- [ ] Buat `AdaptiveAmbienceEngine` class dengan `evaluate(BehaviorSnapshot, SharedPreferences)` → `AmbienceProfile`
+- [ ] Buat `AdaptiveAmbienceEngine` class dengan `evaluate(BehaviorSnapshot snapshot, List<DailySummary> last7Days, SharedPreferences prefs)` → `AmbienceProfile`
+- [ ] `last7Days` diteruskan dari `HomeNotifier` yang sudah punya data ini — tidak ada query DB tambahan
 - [ ] Idempotency: cek `luma_ambience_last_eval_date`, skip jika sudah hari ini
-- [ ] Guard: jika `baselineDaysAvailable < 7`, return `AmbienceProfile.defaults()`
-- [ ] Koordinasikan: `OrbStateEngine` + `BiologicalTimeCalculator` + `WeeklyRhythmCalculator` + `OrbVariantResolver`
+- [ ] Guard: jika `snapshot.baselineDaysAvailable < 7`, return `AmbienceProfile.defaults()`
+- [ ] Koordinasikan: `OrbStateEngine` + `BiologicalTimeCalculator` + `WeeklyRhythmCalculator(last7Days)` + `OrbVariantResolver`
 - [ ] Persist `AmbienceProfile` ke `luma_ambience_profile_json`
 - [ ] Log transisi jika `OrbVariant` berubah
 - [ ] Fallback: jika engine gagal (exception), return `AmbienceProfile.defaults()` tanpa crash

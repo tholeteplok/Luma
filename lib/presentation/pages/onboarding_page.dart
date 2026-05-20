@@ -6,9 +6,9 @@ import '../widgets/progress_dots.dart';
 
 /// OnboardingPage — 3 slide perkenalan Luma.
 ///
-/// Setiap slide punya AmbientOrb yang hidup (bukan lingkaran solid).
-/// Transisi antar slide: slide horizontal + fade.
-/// Teks menggunakan warna dari LumaPalette agar terbaca di dark & light mode.
+/// Satu PageView tunggal per slide (orb + teks dalam satu item).
+/// Dua PageView terpisah sebelumnya menyebabkan konflik onPageChanged
+/// dan tombol tidak berfungsi di slide 1 & 2.
 class OnboardingPage extends StatefulWidget {
   final Future<void> Function() onComplete;
 
@@ -27,20 +27,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _SlideData(
       orbState: OrbState.dawn,
       title: 'Luma belum mengenal\nritmemu.',
-      subtitle: 'Tidak ada form. Tidak ada target.\nLuma belajar kapan pagimu dimulai — bisa jam 6 pagi, bisa jam 10 malam.',
+      subtitle:
+          'Tidak ada form. Tidak ada target.\n'
+          'Luma belajar kapan pagimu dimulai — bisa jam 6 pagi, bisa jam 10 malam.',
       buttonLabel: 'Lanjut',
     ),
     _SlideData(
       orbState: OrbState.calm,
       title: 'Luma mengamati.\nBukan menghakimi.',
-      subtitle: 'Semua data hanya ada di perangkatmu.\nKami tidak bisa melihatnya.',
+      subtitle:
+          'Semua data hanya ada di perangkatmu.\n'
+          'Kami tidak bisa melihatnya.',
       buttonLabel: 'Aku percaya.',
       showPrivacyTag: true,
     ),
     _SlideData(
       orbState: OrbState.dawn,
       title: 'Beberapa hari ke depan,\nLuma akan menyapamu.',
-      subtitle: 'Tidak ada yang perlu dilakukan.\nHanya... gunakan perangkatmu.',
+      subtitle:
+          'Tidak ada yang perlu dilakukan.\n'
+          'Hanya... gunakan perangkatmu.',
       buttonLabel: 'Mulai Gunakan',
       showTimeline: true,
     ),
@@ -61,7 +67,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void _next() {
     if (_currentPage < _slides.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 450),
         curve: Curves.easeInOut,
       );
     } else {
@@ -78,41 +84,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   Widget build(BuildContext context) {
     final p = context.luma;
+
     return Scaffold(
       backgroundColor: p.bgBase,
       body: SafeArea(
         child: Column(
           children: [
-            // ── Orb area — 45% tinggi layar ──────────────────────────────────
+            // ── Satu PageView — orb + teks dalam satu item ────────────────────
             Expanded(
-              flex: 45,
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemCount: _slides.length,
                 itemBuilder: (context, i) {
-                  return _OrbSlide(
-                    orbState: _slides[i].orbState,
-                    // Orb aktif hanya di halaman yang terlihat
+                  final slide = _slides[i];
+                  return _OnboardingSlide(
+                    slide: slide,
                     isActive: i == _currentPage,
-                  );
-                },
-              ),
-            ),
-
-            // ── Teks + konten ─────────────────────────────────────────────────
-            Expanded(
-              flex: 55,
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                itemCount: _slides.length,
-                itemBuilder: (context, i) {
-                  return _SlideContent(
-                    slide: _slides[i],
-                    onNext: _next,
                     isLast: i == _slides.length - 1,
-                    isCompleting: _completing,
+                    isCompleting: _completing && i == _slides.length - 1,
+                    onNext: _next,
                   );
                 },
               ),
@@ -120,7 +111,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
             // ── Progress dots ─────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.only(bottom: 20),
               child: ProgressDots(
                 currentIndex: _currentPage,
                 total: _slides.length,
@@ -156,81 +147,71 @@ class _SlideData {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  ORB SLIDE — hanya orb, di-isolasi agar tidak rebuild teks
+//  SLIDE TUNGGAL — orb + teks + tombol dalam satu widget
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _OrbSlide extends StatelessWidget {
-  final OrbState orbState;
-  final bool isActive;
-
-  const _OrbSlide({required this.orbState, required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context).width * 0.55;
-    return Center(
-      child: AmbientOrb(
-        state: orbState,
-        size: size,
-        reduceMotion: !isActive, // hemat resource saat tidak aktif
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  SLIDE CONTENT — teks + tombol
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SlideContent extends StatelessWidget {
+class _OnboardingSlide extends StatelessWidget {
   final _SlideData slide;
-  final VoidCallback onNext;
+  final bool isActive;
   final bool isLast;
   final bool isCompleting;
+  final VoidCallback onNext;
 
-  const _SlideContent({
+  const _OnboardingSlide({
     required this.slide,
-    required this.onNext,
+    required this.isActive,
     required this.isLast,
     required this.isCompleting,
+    required this.onNext,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = context.luma;
+    final screenH = MediaQuery.sizeOf(context).height;
+    final orbSize = screenH * 0.22;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 8),
+          // ── Orb ─────────────────────────────────────────────────────────────
+          SizedBox(
+            height: screenH * 0.30,
+            child: Center(
+              child: AmbientOrb(
+                state: slide.orbState,
+                size: orbSize,
+                reduceMotion: !isActive,
+              ),
+            ),
+          ),
 
-          // ── Judul ──────────────────────────────────────────────────────────
+          // ── Judul ────────────────────────────────────────────────────────────
           Text(
             slide.title,
             style: GoogleFonts.cormorantGaramond(
               fontSize: 28,
               fontWeight: FontWeight.w600,
-              color: p.textPrimary,   // selalu terbaca
+              color: p.textPrimary,
               height: 1.35,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
 
-          // ── Subtitle ───────────────────────────────────────────────────────
+          // ── Subtitle ─────────────────────────────────────────────────────────
           Text(
             slide.subtitle,
             style: GoogleFonts.dmSans(
-              fontSize: 15,
-              color: p.textSecondary, // sedikit lebih redup dari judul
+              fontSize: 14,
+              color: p.textSecondary,
               height: 1.6,
             ),
             textAlign: TextAlign.center,
           ),
 
-          // ── Privacy tag (slide 2) ──────────────────────────────────────────
+          // ── Privacy tag (slide 2) ─────────────────────────────────────────────
           if (slide.showPrivacyTag) ...[
             const SizedBox(height: 20),
             Container(
@@ -258,24 +239,24 @@ class _SlideContent extends StatelessWidget {
             ),
           ],
 
-          // ── Timeline (slide 3) ─────────────────────────────────────────────
+          // ── Timeline (slide 3) ────────────────────────────────────────────────
           if (slide.showTimeline) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             _TimelineItems(p: p),
           ],
 
           const Spacer(),
 
-          // ── Tombol ─────────────────────────────────────────────────────────
+          // ── Tombol ───────────────────────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: _OnboardingButton(
               label: slide.buttonLabel,
-              isLoading: isLast && isCompleting,
+              isLoading: isCompleting,
               onPressed: onNext,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -292,7 +273,7 @@ class _TimelineItems extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
+    const items = [
       ('Hari 1–2', 'Mengamati...'),
       ('Hari 3', 'Sapaan pertama'),
       ('Hari 7', 'Refleksi mingguan'),
@@ -357,14 +338,12 @@ class _OnboardingButton extends StatelessWidget {
     final p = context.luma;
     return GestureDetector(
       onTap: isLoading ? null : onPressed,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: p.borderSubtle,
-            width: 1,
-          ),
+          border: Border.all(color: p.borderSubtle, width: 1),
           borderRadius: BorderRadius.circular(12),
           color: p.bgSurface,
         ),

@@ -1,6 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'core/di/di.dart' as di;
 import 'presentation/bloc/home_bloc.dart';
@@ -10,7 +11,12 @@ import 'main_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Initialize locale data untuk DateFormat (intl package).
+  // Tanpa ini, DateFormat('EEEE, d MMMM', 'id_ID') fallback ke English.
+  await initializeDateFormatting('id_ID');
+  await initializeDateFormatting('en_US');
+
   // Initialize dependencies (database, encryption, etc.)
   await di.initDependencies();
   

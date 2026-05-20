@@ -1,76 +1,63 @@
 import 'package:flutter/material.dart';
 
-/// Luma Color System — Sesuai visual_prototype_dark.html
+/// Luma Color System
+///
+/// Palette: Emerald & Gold (Bioluminescence + Mineral)
+/// Referensi: #EEE8B2, #C18D52, #081B1B, #203B37, #5A8F76, #96CDB0
 ///
 /// Filosofi: Tidak ada warna yang menghakimi.
 /// Warna hanya mencerminkan state, bukan nilai baik/buruk.
-///
-/// Cara baru (theme-aware): pakai `context.luma.bgBase` dst.
-/// `AppColors.X` tetap dipertahankan untuk backward compatibility,
-/// tetapi nilainya hanya cocok untuk dark mode. Migrasikan secara bertahap.
 class AppColors {
   AppColors._();
 
   // ── Background Layer ──────────────────────────────────────────────
-  /// Warna dasar paling dalam
-  static const Color bgBase     = Color(0xFF0C0C14);
-  /// Surface card, panel
-  static const Color bgSurface  = Color(0xFF12121E);
-  /// Elevated element (dialog, tooltip)
-  static const Color bgElevated = Color(0xFF191927);
-  /// Subtle background (detail card, form)
-  static const Color bgSubtle   = Color(0xFF1E1E30);
+  static const Color bgBase     = Color(0xFF081B1B); // #081B1B — laut dalam
+  static const Color bgSurface  = Color(0xFF0F2626); // sedikit lebih terang
+  static const Color bgElevated = Color(0xFF162E2E);
+  static const Color bgSubtle   = Color(0xFF1C3535);
 
   // ── Border ────────────────────────────────────────────────────────
-  static const Color borderFaint  = Color(0xFF1F1F32);
-  static const Color borderSubtle = Color(0xFF2A2A42);
-  static const Color borderMedium = Color(0xFF363654);
+  static const Color borderFaint  = Color(0xFF1E3030);
+  static const Color borderSubtle = Color(0xFF203B37); // #203B37
+  static const Color borderMedium = Color(0xFF2A4A44);
 
   // ── Text ──────────────────────────────────────────────────────────
-  static const Color textPrimary   = Color(0xFFE8E8F2);
-  static const Color textSecondary = Color(0xFFB4B4CC);
-  static const Color textTertiary  = Color(0xFF7A7A96);
-  static const Color textSubtle    = Color(0xFF4A4A68);
+  static const Color textPrimary   = Color(0xFFEEE8B2); // #EEE8B2 — krem keemasan
+  static const Color textSecondary = Color(0xFFB8C4A8);
+  static const Color textTertiary  = Color(0xFF7A9A8A);
+  static const Color textSubtle    = Color(0xFF4A6A5A);
 
-  // ── Accent (core brand) ───────────────────────────────────────────
-  static const Color accent      = Color(0xFF6B6BCA);
-  static const Color accentLight = Color(0xFF8A8ADA);
-  static const Color accentMuted = Color(0xFF3D3D7A);
+  // ── Accent (core brand) — gold-teal ──────────────────────────────
+  static const Color accent      = Color(0xFF5A8F76); // #5A8F76
+  static const Color accentLight = Color(0xFF96CDB0); // #96CDB0
+  static const Color accentMuted = Color(0xFF1E3D32);
 
-  // ── Semantic Insight Colors (Indicator only, bukan fill warna) ───
-  /// Info — observasi netral
-  static const Color infoText = Color(0xFF7B9FD4);
-  static const Color infoInd  = Color(0xFF3A5A8A);
+  // ── Semantic Insight Colors ───────────────────────────────────────
+  static const Color infoText = Color(0xFF96CDB0); // teal terang
+  static const Color infoInd  = Color(0xFF203B37);
 
-  /// Notice — perhatian lembut
-  static const Color noticeText = Color(0xFFC4944A);
-  static const Color noticeInd  = Color(0xFF7A5220);
+  static const Color noticeText = Color(0xFFC18D52); // #C18D52 — gold
+  static const Color noticeInd  = Color(0xFF6B4A20);
 
-  /// Gentle — self-compassion, pola positif
-  static const Color gentleText = Color(0xFF6BA896);
-  static const Color gentleInd  = Color(0xFF2E5A50);
+  static const Color gentleText = Color(0xFF96CDB0); // #96CDB0
+  static const Color gentleInd  = Color(0xFF203B37); // #203B37
 
-  /// Warning — anomali, perlu perhatian (tanpa menghakimi)
-  static const Color warnText = Color(0xFFB87066);
-  static const Color warnInd  = Color(0xFF6A3028);
+  static const Color warnText = Color(0xFFC18D52); // gold-amber, bukan merah
+  static const Color warnInd  = Color(0xFF5A3A10);
 
   // ── Ambient / Timeline Encoding ───────────────────────────────────
-  /// Warna untuk representasi fokus di timeline (bukan label)
-  static const Color encodeFocus      = Color(0xFF6B8FCA);
-  /// Warna transisi / medium
-  static const Color encodeMiddle     = Color(0xFF3D3D7A);
-  /// Warna untuk distraksi di timeline
-  static const Color encodeDistraction = Color(0xFF8A6B8A);
-  /// Rest / idle
-  static const Color encodeRest       = Color(0xFF2A2A3E);
+  static const Color encodeFocus       = Color(0xFF5A8F76);
+  static const Color encodeMiddle      = Color(0xFF203B37);
+  static const Color encodeDistraction = Color(0xFF3A5A4A);
+  static const Color encodeRest        = Color(0xFF0F2020);
 
   // ── Fade Granularity Opacity ──────────────────────────────────────
-  static const double opacitySharp      = 1.00;  // 0–7 hari
-  static const double opacityDim        = 0.85;  // 8–14 hari
-  static const double opacityBlurry     = 0.65;  // 15–28 hari
-  static const double opacitySilhouette = 0.45;  // 28+ hari
+  static const double opacitySharp      = 1.00;
+  static const double opacityDim        = 0.85;
+  static const double opacityBlurry     = 0.65;
+  static const double opacitySilhouette = 0.45;
 
-  // ── Legacy Aliases (backward compat) ──────────────────────────────
+  // ── Legacy Aliases ────────────────────────────────────────────────
   @Deprecated('Gunakan AppColors.bgBase')
   static const Color backgroundDark = bgBase;
   @Deprecated('Gunakan AppColors.bgSurface')
@@ -93,47 +80,34 @@ class AppColors {
   static const Color positive = gentleText;
   @Deprecated('Gunakan AppColors.infoText')
   static const Color info = infoText;
-  static const Color success = gentleText;
-  static const Color error   = warnText;
+  static const Color success  = gentleText;
+  static const Color error    = warnText;
   static const Color disabled = textTertiary;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  THEME-AWARE PALETTE  (ThemeExtension)
+//  THEME-AWARE PALETTE
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// LumaPalette — Token warna Luma yang reaktif terhadap brightness.
 ///
-/// Akses via `context.luma` (lihat extension di bawah) atau
-/// `Theme.of(context).extension<LumaPalette>()`.
-///
-/// Kenapa pakai ThemeExtension dan bukan dua kelas warna terpisah?
-/// - Material 3 mendukung lerp otomatis saat transisi tema (animasi halus)
-/// - Sekali deklarasi di `app_theme.dart`, semua widget anak otomatis dapat
+/// Dark mode: Emerald laut dalam (#081B1B base) + gold (#C18D52 accent)
+/// Light mode: Krem keemasan (#EEE8B2 base) + emerald (#203B37 accent)
 class LumaPalette extends ThemeExtension<LumaPalette> {
-  // Backgrounds
   final Color bgBase;
   final Color bgSurface;
   final Color bgElevated;
   final Color bgSubtle;
-
-  // Borders
   final Color borderFaint;
   final Color borderSubtle;
   final Color borderMedium;
-
-  // Text
   final Color textPrimary;
   final Color textSecondary;
   final Color textTertiary;
   final Color textSubtle;
-
-  // Accent
   final Color accent;
   final Color accentLight;
   final Color accentMuted;
-
-  // Semantic indicators (slot warna untuk badge / left-bar di insight card)
   final Color infoText;
   final Color infoInd;
   final Color infoBadgeBg;
@@ -176,94 +150,76 @@ class LumaPalette extends ThemeExtension<LumaPalette> {
     required this.warnBadgeBg,
   });
 
-  /// Palette untuk dark mode — sumber kebenaran utama (sesuai visual_prototype_dark.html)
+  // ── DARK MODE — Emerald laut dalam ────────────────────────────────
   static const LumaPalette dark = LumaPalette(
-    bgBase: Color(0xFF0C0C14),
-    bgSurface: Color(0xFF12121E),
-    bgElevated: Color(0xFF191927),
-    bgSubtle: Color(0xFF1E1E30),
-    borderFaint: Color(0xFF1F1F32),
-    borderSubtle: Color(0xFF2A2A42),
-    borderMedium: Color(0xFF363654),
-    textPrimary: Color(0xFFE8E8F2),
-    textSecondary: Color(0xFFB4B4CC),
-    textTertiary: Color(0xFF7A7A96),
-    textSubtle: Color(0xFF4A4A68),
-    accent: Color(0xFF6B6BCA),
-    accentLight: Color(0xFF8A8ADA),
-    accentMuted: Color(0xFF3D3D7A),
-    infoText: Color(0xFF7B9FD4),
-    infoInd: Color(0xFF3A5A8A),
-    infoBadgeBg: Color(0xFF0E1420),
-    noticeText: Color(0xFFC4944A),
-    noticeInd: Color(0xFF7A5220),
+    bgBase:     Color(0xFF081B1B), // #081B1B — laut dalam
+    bgSurface:  Color(0xFF0F2626),
+    bgElevated: Color(0xFF162E2E),
+    bgSubtle:   Color(0xFF1C3535),
+    borderFaint:  Color(0xFF1E3030),
+    borderSubtle: Color(0xFF203B37), // #203B37
+    borderMedium: Color(0xFF2A4A44),
+    textPrimary:   Color(0xFFEEE8B2), // #EEE8B2 — krem keemasan
+    textSecondary: Color(0xFFB8C4A8),
+    textTertiary:  Color(0xFF7A9A8A),
+    textSubtle:    Color(0xFF4A6A5A),
+    accent:      Color(0xFF5A8F76), // #5A8F76
+    accentLight: Color(0xFF96CDB0), // #96CDB0
+    accentMuted: Color(0xFF1E3D32),
+    infoText:   Color(0xFF96CDB0),
+    infoInd:    Color(0xFF203B37),
+    infoBadgeBg: Color(0xFF0C2020),
+    noticeText:   Color(0xFFC18D52), // #C18D52 — gold
+    noticeInd:    Color(0xFF6B4A20),
     noticeBadgeBg: Color(0xFF1A1008),
-    gentleText: Color(0xFF6BA896),
-    gentleInd: Color(0xFF2E5A50),
-    gentleBadgeBg: Color(0xFF101E1B),
-    warnText: Color(0xFFB87066),
-    warnInd: Color(0xFF6A3028),
-    warnBadgeBg: Color(0xFF1E1010),
+    gentleText:   Color(0xFF96CDB0),
+    gentleInd:    Color(0xFF203B37),
+    gentleBadgeBg: Color(0xFF0C2020),
+    warnText:   Color(0xFFC18D52), // gold-amber, bukan merah
+    warnInd:    Color(0xFF5A3A10),
+    warnBadgeBg: Color(0xFF1A1005),
   );
 
-  /// Palette untuk light mode — versi pagi yang halus, tetap intim, tidak silau
+  // ── LIGHT MODE — Krem keemasan ────────────────────────────────────
   static const LumaPalette light = LumaPalette(
-    bgBase: Color(0xFFF6F5F2),     // off-white hangat
-    bgSurface: Color(0xFFFFFFFF),  // putih bersih untuk card
-    bgElevated: Color(0xFFFAF9F5), // sedikit lebih terang dari surface
-    bgSubtle: Color(0xFFEDECE7),   // subtle backdrop
-    borderFaint: Color(0xFFE8E6E0),
-    borderSubtle: Color(0xFFD8D5CC),
-    borderMedium: Color(0xFFC2BFB4),
-    textPrimary: Color(0xFF1A1A2E),
-    textSecondary: Color(0xFF45455A),
-    textTertiary: Color(0xFF7A7A8E),
-    textSubtle: Color(0xFFA8A8B8),
-    accent: Color(0xFF5454B8),
-    accentLight: Color(0xFF6B6BCA),
-    accentMuted: Color(0xFFE0E0F2),
-    infoText: Color(0xFF3A5A8A),
-    infoInd: Color(0xFF7B9FD4),
-    infoBadgeBg: Color(0xFFEAF0FA),
-    noticeText: Color(0xFF7A5220),
-    noticeInd: Color(0xFFC4944A),
-    noticeBadgeBg: Color(0xFFFAF1E2),
-    gentleText: Color(0xFF2E5A50),
-    gentleInd: Color(0xFF6BA896),
-    gentleBadgeBg: Color(0xFFE6F1ED),
-    warnText: Color(0xFF8A3A30),
-    warnInd: Color(0xFFB87066),
-    warnBadgeBg: Color(0xFFFAEAE7),
+    bgBase:     Color(0xFFF5F2E8), // krem hangat dari #EEE8B2
+    bgSurface:  Color(0xFFFFFFFA),
+    bgElevated: Color(0xFFF8F5EC),
+    bgSubtle:   Color(0xFFEDE8D8),
+    borderFaint:  Color(0xFFDDD8C4),
+    borderSubtle: Color(0xFFC8C0A0),
+    borderMedium: Color(0xFFB0A880),
+    textPrimary:   Color(0xFF081B1B), // #081B1B — gelap di atas terang
+    textSecondary: Color(0xFF203B37), // #203B37
+    textTertiary:  Color(0xFF4A6A5A),
+    textSubtle:    Color(0xFF8A9A8A),
+    accent:      Color(0xFF203B37), // #203B37 — emerald gelap
+    accentLight: Color(0xFF5A8F76), // #5A8F76
+    accentMuted: Color(0xFFD0E8DC),
+    infoText:   Color(0xFF203B37),
+    infoInd:    Color(0xFF5A8F76),
+    infoBadgeBg: Color(0xFFE0F0E8),
+    noticeText:   Color(0xFF6B4A20),
+    noticeInd:    Color(0xFFC18D52),
+    noticeBadgeBg: Color(0xFFF5E8D0),
+    gentleText:   Color(0xFF203B37),
+    gentleInd:    Color(0xFF5A8F76),
+    gentleBadgeBg: Color(0xFFE0F0E8),
+    warnText:   Color(0xFF5A3A10),
+    warnInd:    Color(0xFFC18D52),
+    warnBadgeBg: Color(0xFFF5E0C0),
   );
 
   @override
   LumaPalette copyWith({
-    Color? bgBase,
-    Color? bgSurface,
-    Color? bgElevated,
-    Color? bgSubtle,
-    Color? borderFaint,
-    Color? borderSubtle,
-    Color? borderMedium,
-    Color? textPrimary,
-    Color? textSecondary,
-    Color? textTertiary,
-    Color? textSubtle,
-    Color? accent,
-    Color? accentLight,
-    Color? accentMuted,
-    Color? infoText,
-    Color? infoInd,
-    Color? infoBadgeBg,
-    Color? noticeText,
-    Color? noticeInd,
-    Color? noticeBadgeBg,
-    Color? gentleText,
-    Color? gentleInd,
-    Color? gentleBadgeBg,
-    Color? warnText,
-    Color? warnInd,
-    Color? warnBadgeBg,
+    Color? bgBase, Color? bgSurface, Color? bgElevated, Color? bgSubtle,
+    Color? borderFaint, Color? borderSubtle, Color? borderMedium,
+    Color? textPrimary, Color? textSecondary, Color? textTertiary, Color? textSubtle,
+    Color? accent, Color? accentLight, Color? accentMuted,
+    Color? infoText, Color? infoInd, Color? infoBadgeBg,
+    Color? noticeText, Color? noticeInd, Color? noticeBadgeBg,
+    Color? gentleText, Color? gentleInd, Color? gentleBadgeBg,
+    Color? warnText, Color? warnInd, Color? warnBadgeBg,
   }) {
     return LumaPalette(
       bgBase: bgBase ?? this.bgBase,
@@ -329,7 +285,6 @@ class LumaPalette extends ThemeExtension<LumaPalette> {
   }
 }
 
-/// Shortcut: `context.luma.bgBase` daripada `Theme.of(context).extension<LumaPalette>()!.bgBase`
 extension LumaPaletteContext on BuildContext {
   LumaPalette get luma =>
       Theme.of(this).extension<LumaPalette>() ?? LumaPalette.dark;

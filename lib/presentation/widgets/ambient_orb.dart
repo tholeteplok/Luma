@@ -7,32 +7,20 @@ export 'package:luma/domain/services/orb_state_engine.dart' show OrbState;
 // ─────────────────────────────────────────────────────────────────────────────
 //  PALETTE — Bioluminescence (Laut Dalam)
 //
-//  Terinspirasi dari plankton bercahaya di malam hari.
-//  Organik, hidup, tidak agresif — tidak ada referensi tech/AI.
+//  Palette: Emerald & Gold (#EEE8B2, #C18D52, #081B1B, #203B37, #5A8F76, #96CDB0)
 //
 //  Dawn  → teal sangat gelap, seperti laut sebelum fajar
 //  Calm  → hijau laut dalam, stabil dan tenang
-//  Wave  → biru abu-abu, seperti ombak malam yang bergerak
-//  Mist  → abu-abu hampir hitam, kehadiran tanpa bentuk
+//  Wave  → teal-biru bergerak, seperti ombak malam
+//  Mist  → abu-abu kehijauan, kehadiran tanpa bentuk
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _OrbPalette {
-  /// Warna inti (layer paling dalam)
   final Color core;
-
-  /// Warna tengah
   final Color mid;
-
-  /// Warna luar (paling redup)
   final Color outer;
-
-  /// Intensitas gelombang — seberapa "gelisah" tepi orb
   final double waveIntensity;
-
-  /// Jumlah titik bezier — lebih banyak = lebih bergerigi
   final int wavePoints;
-
-  /// Durasi satu siklus napas
   final Duration breathDuration;
 
   const _OrbPalette({
@@ -47,34 +35,34 @@ class _OrbPalette {
 
 const _palettes = {
   OrbState.dawn: _OrbPalette(
-    core:  Color(0xFF1A5A5A), // teal redup — belum sepenuhnya terbentuk
-    mid:   Color(0xFF0F3A3A),
-    outer: Color(0xFF0A2626),
-    waveIntensity: 0.045,    // sangat halus — masih belajar
+    core:  Color(0xFF1A5A4A), // teal redup — belum sepenuhnya terbentuk
+    mid:   Color(0xFF0F3A2E),
+    outer: Color(0xFF081B1B), // #081B1B
+    waveIntensity: 0.045,
     wavePoints: 7,
     breathDuration: Duration(milliseconds: 6500),
   ),
   OrbState.calm: _OrbPalette(
-    core:  Color(0xFF1E6A50), // hijau laut dalam — stabil
-    mid:   Color(0xFF144A38),
-    outer: Color(0xFF0C2E22),
-    waveIntensity: 0.030,    // paling halus — tenang
+    core:  Color(0xFF5A8F76), // #5A8F76 — hijau laut dalam
+    mid:   Color(0xFF203B37), // #203B37
+    outer: Color(0xFF0F2626),
+    waveIntensity: 0.030,
     wavePoints: 8,
     breathDuration: Duration(milliseconds: 5500),
   ),
   OrbState.wave: _OrbPalette(
-    core:  Color(0xFF1A3A5A), // biru abu-abu — bergerak
-    mid:   Color(0xFF102840),
-    outer: Color(0xFF0A1A2E),
-    waveIntensity: 0.075,    // lebih bergelombang — tersebar
+    core:  Color(0xFF3A6A5A), // teal bergerak
+    mid:   Color(0xFF1E4A3A),
+    outer: Color(0xFF0F2E24),
+    waveIntensity: 0.075,
     wavePoints: 11,
     breathDuration: Duration(milliseconds: 3800),
   ),
   OrbState.mist: _OrbPalette(
-    core:  Color(0xFF252525), // abu-abu hampir hitam — hadir tanpa bentuk
-    mid:   Color(0xFF1A1A1A),
-    outer: Color(0xFF111111),
-    waveIntensity: 0.018,    // hampir tidak bergerak
+    core:  Color(0xFF1E2E2A), // abu-abu kehijauan — hadir tanpa bentuk
+    mid:   Color(0xFF141E1C),
+    outer: Color(0xFF0A1412),
+    waveIntensity: 0.018,
     wavePoints: 6,
     breathDuration: Duration(milliseconds: 9000),
   ),

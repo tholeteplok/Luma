@@ -102,8 +102,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildOrbSection(BuildContext context, HomeNotifier homeState) {
     final screenH = MediaQuery.sizeOf(context).height;
     final orbAreaH = screenH * 0.50;
-    // Orb sendiri 70% dari area agar ada ruang napas di tepi
     final orbSize = orbAreaH * 0.70;
+    final reduceMotion = context.read<SettingsNotifier>().reduceMotion;
 
     return SizedBox(
       height: orbAreaH,
@@ -111,6 +111,7 @@ class _HomePageState extends State<HomePage> {
         child: AmbientOrb(
           mood: _orbMood(homeState),
           size: orbSize,
+          reduceMotion: reduceMotion,
         ),
       ),
     );

@@ -1,223 +1,355 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:luma/core/themes/colors.dart';
-import 'package:luma/presentation/widgets/ambient_visualization.dart';
-import 'package:luma/presentation/widgets/outlined_ghost_button.dart';
-import 'package:luma/core/services/background_task_manager.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/themes/colors.dart';
+import '../../data/tracking/usage_stats_service.dart';
+import '../widgets/ambient_orb.dart';
+import '../widgets/outlined_ghost_button.dart';
 
-/// PermissionGatewayPage — Halaman onboarding permission bergaya Luma.
+/// PermissionGatewayPage — Gerbang izin sebelum masuk ke home.
 ///
-/// Ditampilkan saat user belum memberikan akses Usage Stats.
-/// Tidak memaksa — hanya mengundang.
+/// Flow:
+/// 1. Cek permission yang sudah ada saat init
+/// 2. User tap item → buka Settings Android
+/// 3. App polling hasUsageStatsPermission() setiap 500ms saat kembali
+/// 4. Checkbox auto-check saat permission terdeteksi
+/// 5. Tombol LANJUT aktif saat app usage granted (Drive opsional)
 ///
-/// Filosofi: "Luma mengamati hanya jika kamu mengizinkan."
+/// Ini adalah blocage yang necessary — tanpa app usage permission,
+/// Luma tidak bisa melihat apapun.
 class PermissionGatewayPage extends StatefulWidget {
-  /// Dipanggil saat user memberi izin ATAU memilih untuk melewati
-  final VoidCallback onContinue;
+  final VoidCallback onPermissionsGranted;
 
-  const PermissionGatewayPage({super.key, required this.onContinue});
+  const PermissionGatewayPage({
+    super.key,
+    required this.onPermissionsGranted,
+  });
 
   @override
   State<PermissionGatewayPage> createState() => _PermissionGatewayPageState();
 }
 
 class _PermissionGatewayPageState extends State<PermissionGatewayPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnim;
-  bool _isWaitingReturn = false;
+    with WidgetsBindingObserver {
+  bool _appUsageGranted = false;
+  bool _driveBackupGranted = false; // opsional
+  bool _isPolling = false;
+  Timer? _pollTimer;
+
+  final _usageStats = UsageStatsService();
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat(reverse: true);
-    _pulseAnim = CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut);
+    WidgetsBinding.instance.addObserver(this);
+    _checkExistingPermissions();
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _openUsageSettings() async {
-    setState(() => _isWaitingReturn = true);
-    // Buka Android Usage Access Settings
-    await BackgroundTaskManager.openUsageAccessSettings();
-  }
-
-  Future<void> _onReturnFromSettings() async {
-    // Cek ulang apakah permission sudah granted
-    final granted = await BackgroundTaskManager.hasUsageStatsPermission();
-    if (mounted) {
-      if (granted) {
-        widget.onContinue();
-      } else {
-        setState(() => _isWaitingReturn = false);
-        // Tampilkan hint singkat
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Belum diizinkan — kamu bisa mengubahnya kapan saja di pengaturan.',
-              style: TextStyle(fontFamily: 'Cormorant'),
-            ),
-            backgroundColor: AppColors.bgElevated,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+  /// Dipanggil saat app kembali ke foreground (dari Settings)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isPolling) {
+      _startPolling();
     }
   }
 
+  /// Cek permission yang sudah ada saat pertama buka
+  Future<void> _checkExistingPermissions() async {
+    final granted = await _usageStats.hasUsageStatsPermission();
+    if (mounted) {
+      setState(() => _appUsageGranted = granted);
+    }
+  }
+
+  /// User tap checkbox app usage → buka Settings
+  Future<void> _requestAppUsagePermission() async {
+    setState(() => _isPolling = true);
+    await _usageStats.openAppSettings();
+    // Polling dimulai saat app kembali ke foreground (via didChangeAppLifecycleState)
+    // Tapi juga mulai sekarang untuk jaga-jaga
+    _startPolling();
+  }
+
+  /// Poll setiap 500ms sampai permission granted atau max 20 detik
+  void _startPolling() {
+    _pollTimer?.cancel();
+    int attempts = 0;
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
+      attempts++;
+      final granted = await _usageStats.hasUsageStatsPermission();
+      if (granted && mounted) {
+        timer.cancel();
+        setState(() {
+          _appUsageGranted = true;
+          _isPolling = false;
+        });
+      } else if (attempts >= 40) {
+        // 20 detik — berhenti polling
+        timer.cancel();
+        if (mounted) setState(() => _isPolling = false);
+      }
+    });
+  }
+
+  bool get _canProceed => _appUsageGranted;
+
   @override
   Widget build(BuildContext context) {
+    final p = context.luma;
+    final screenH = MediaQuery.sizeOf(context).height;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+      backgroundColor: p.bgBase,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Visual ambient — sama dengan onboarding
-            Expanded(
-              flex: 3,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const AmbientVisualization(variant: 2),
-                  // Pulse ring di sekitar orb
-                  AnimatedBuilder(
-                    animation: _pulseAnim,
-                    builder: (context, _) {
-                      return Container(
-                        width: 80 + (_pulseAnim.value * 20),
-                        height: 80 + (_pulseAnim.value * 20),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.primaryDark.withValues(
-                              alpha: (1 - _pulseAnim.value) * 0.4,
-                            ),
-                            width: 1,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Narasi utama
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _isWaitingReturn
-                    ? 'Kembali ke Luma\nsetelah mengatur izin.'
-                    : 'Untuk mengamati ritmu,\nLuma perlu sedikit akses.',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      height: 1.35,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Sub teks — filosofi
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                _isWaitingReturn
-                    ? 'Di halaman pengaturan, ketuk nama Luma\nlalu aktifkan akses penggunaan.'
-                    : 'Tidak ada yang dinilai.\nSemua data hanya ada di perangkatmu.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textDarkSecondary,
-                      height: 1.6,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Privacy badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.positive.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.positive.withValues(alpha: 0.15),
+            // ── Orb visual ────────────────────────────────────────────────────
+            SizedBox(
+              height: screenH * 0.30,
+              child: Center(
+                child: AmbientOrb(
+                  state: OrbState.dawn,
+                  size: screenH * 0.20,
+                  reduceMotion: false,
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.lock_outline_rounded,
-                    size: 14,
-                    color: AppColors.positive.withValues(alpha: 0.7),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Data tidak pernah meninggalkan perangkatmu',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textDarkSecondary,
-                          fontSize: 11,
-                        ),
-                  ),
-                ],
+            ),
+
+            // ── Konten ────────────────────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Luma butuh izin\nuntuk bekerja.',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w400,
+                        color: p.textPrimary,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tidak ada yang dinilai. Semua data hanya ada di perangkatmu.',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 14,
+                        color: p.textTertiary,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // ── Permission item 1: App Usage (wajib) ─────────────────
+                    _PermissionItem(
+                      icon: Icons.phonelink_setup_outlined,
+                      title: 'Akses ke daftar aplikasi',
+                      subtitle: 'Luma melihat app apa saja yang kamu buka — '
+                          'ini satu-satunya cara Luma bisa mengamati.',
+                      isGranted: _appUsageGranted,
+                      isLoading: _isPolling && !_appUsageGranted,
+                      isRequired: true,
+                      onTap: _appUsageGranted ? null : _requestAppUsagePermission,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Permission item 2: Google Drive (opsional) ───────────
+                    _PermissionItem(
+                      icon: Icons.cloud_upload_outlined,
+                      title: 'Cadangan di Google Drive',
+                      subtitle: 'Opsional — untuk backup insight dan pola kamu.',
+                      isGranted: _driveBackupGranted,
+                      isLoading: false,
+                      isRequired: false,
+                      onTap: _driveBackupGranted
+                          ? null
+                          : () {
+                              // Drive permission dihandle saat user tap backup
+                              // di Settings — tidak perlu diminta di sini
+                              setState(() => _driveBackupGranted = true);
+                            },
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            const Spacer(),
-
-            // CTA Buttons
+            // ── CTA ───────────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
               child: Column(
                 children: [
-                  if (_isWaitingReturn) ...[
-                    // Sudah kembali dari settings
-                    OutlinedGhostButton(
-                      text: 'Sudah diizinkan',
-                      onPressed: _onReturnFromSettings,
-                    ),
+                  OutlinedGhostButton(
+                    text: 'Lanjut',
+                    enabled: _canProceed,
+                    onPressed: _canProceed ? widget.onPermissionsGranted : null,
+                  ),
+                  if (!_appUsageGranted) ...[
                     const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: widget.onContinue,
-                      child: Text(
-                        'Lewati untuk sekarang',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textDarkSecondary,
-                            ),
-                      ),
-                    ),
-                  ] else ...[
-                    // Belum buka settings
-                    OutlinedGhostButton(
-                      text: 'Izinkan Luma Mengamati',
-                      onPressed: _openUsageSettings,
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: widget.onContinue,
+                    GestureDetector(
+                      onTap: widget.onPermissionsGranted,
                       child: Text(
                         'Lewati dulu',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textDarkSecondary,
-                            ),
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          color: p.textSubtle,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: 32),
+// ─────────────────────────────────────────────────────────────────────────────
+//  PERMISSION ITEM WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PermissionItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool isGranted;
+  final bool isLoading;
+  final bool isRequired;
+  final VoidCallback? onTap;
+
+  const _PermissionItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isGranted,
+    required this.isLoading,
+    required this.isRequired,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.luma;
+
+    final borderColor = isGranted
+        ? p.gentleInd.withValues(alpha: 0.5)
+        : p.borderSubtle;
+    final bgColor = isGranted
+        ? p.gentleBadgeBg
+        : Colors.transparent;
+
+    return GestureDetector(
+      onTap: isGranted ? null : onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border.all(color: borderColor, width: 1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Checkbox circle ──────────────────────────────────────────────
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isGranted ? p.gentleInd : Colors.transparent,
+                border: Border.all(
+                  color: isGranted ? p.gentleInd : p.textTertiary,
+                  width: 1.5,
+                ),
+              ),
+              child: isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: p.textTertiary,
+                      ),
+                    )
+                  : isGranted
+                      ? Icon(Icons.check, size: 14, color: p.bgBase)
+                      : null,
+            ),
+
+            const SizedBox(width: 14),
+
+            // ── Text ─────────────────────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isGranted ? p.gentleText : p.textPrimary,
+                        ),
+                      ),
+                      if (isRequired) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: p.accentMuted,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'WAJIB',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                              color: p.accentLight,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      color: p.textTertiary,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Arrow (hanya saat belum granted) ─────────────────────────────
+            if (!isGranted && !isLoading) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.arrow_forward_ios, size: 14, color: p.textSubtle),
+            ],
           ],
         ),
       ),

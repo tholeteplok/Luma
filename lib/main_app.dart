@@ -5,9 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/themes/app_theme.dart';
 import '../presentation/bloc/theme_bloc.dart';
 import '../presentation/pages/onboarding_page.dart';
+import '../presentation/pages/permission_gateway_page.dart';
 import '../presentation/pages/main_shell.dart';
 
 /// Main app widget dengan routing dan theme support.
+///
+/// Priority routing:
+///   1. PermissionGate — harus pertama, tanpa app usage Luma tidak bisa bekerja
+///   2. Onboarding — perkenalan untuk user baru
+///   3. MainShell — home screen
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
@@ -17,21 +23,32 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   // null = masih loading dari prefs
+  bool? _hasCompletedPermissionGate;
   bool? _hasCompletedOnboarding;
 
   @override
   void initState() {
     super.initState();
-    _checkOnboardingStatus();
+    _checkStatuses();
   }
 
-  Future<void> _checkOnboardingStatus() async {
+  Future<void> _checkStatuses() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
+        _hasCompletedPermissionGate =
+            prefs.getBool('permission_gate_completed') ?? false;
         _hasCompletedOnboarding =
             prefs.getBool('onboarding_completed') ?? false;
       });
+    }
+  }
+
+  Future<void> _onPermissionsGranted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('permission_gate_completed', true);
+    if (mounted) {
+      setState(() => _hasCompletedPermissionGate = true);
     }
   }
 
@@ -47,19 +64,31 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeNotifier>();
 
-    // Tampilkan layar kosong saat masih membaca prefs
-    // (biasanya < 50ms, tidak terlihat user)
-    if (_hasCompletedOnboarding == null) {
+    // Loading state — layar kosong < 50ms
+    if (_hasCompletedPermissionGate == null ||
+        _hasCompletedOnboarding == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: theme.themeMode,
         home: const Scaffold(
-          backgroundColor: Color(0xFF0C0C14),
+          backgroundColor: Color(0xFF081B1B),
           body: SizedBox.shrink(),
         ),
       );
+    }
+
+    // Routing priority: PermissionGate > Onboarding > Home
+    Widget home;
+    if (!_hasCompletedPermissionGate!) {
+      home = PermissionGatewayPage(
+        onPermissionsGranted: _onPermissionsGranted,
+      );
+    } else if (!_hasCompletedOnboarding!) {
+      home = OnboardingPage(onComplete: _onOnboardingComplete);
+    } else {
+      home = const MainShell();
     }
 
     return MaterialApp(
@@ -68,9 +97,7 @@ class _MainAppState extends State<MainApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: theme.themeMode,
-      home: _hasCompletedOnboarding!
-          ? const MainShell()
-          : OnboardingPage(onComplete: _onOnboardingComplete),
+      home: home,
     );
   }
 }

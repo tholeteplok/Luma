@@ -1,54 +1,68 @@
-// lib/presentation/widgets/outlined_ghost_button.dart
-
 import 'package:flutter/material.dart';
-import 'package:luma/config/colors.dart';
-import 'package:luma/config/typography.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/themes/colors.dart';
 
+/// OutlinedGhostButton — Tombol outline minimal sesuai bahasa visual Luma.
+/// Theme-aware via `context.luma`.
 class OutlinedGhostButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
+
+  /// Jika false, tombol ditampilkan disabled (opacity redup, tidak bisa ditekan).
+  /// Default true.
+  final bool enabled;
 
   const OutlinedGhostButton({
     super.key,
     required this.text,
     required this.onPressed,
     this.isLoading = false,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44.0, // buttonHeight from design tokens
-      child: OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: isLoading 
-                ? LumaColors.borderFaint 
-                : LumaColors.borderSubtle,
+    final p = context.luma;
+    final isDisabled = !enabled || isLoading;
+
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isDisabled ? 0.4 : 1.0,
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: OutlinedButton(
+          onPressed: isDisabled ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(
+              color: isDisabled ? p.borderFaint : p.borderSubtle,
+              width: 1,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: p.bgSurface,
+            foregroundColor: p.textPrimary,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0), // radiusMd
-          ),
+          child: isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: p.textTertiary,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: isDisabled ? p.textTertiary : p.textPrimary,
+                  ),
+                ),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.0,
-                  valueColor: AlwaysStoppedAnimation<Color>(LumaColors.textSecondary),
-                ),
-              )
-            : Text(
-                text,
-                style: LumaTypography.bodyMedium.copyWith(
-                  color: isLoading 
-                      ? LumaColors.textTertiary 
-                      : LumaColors.textSecondary,
-                ),
-              ),
       ),
     );
   }

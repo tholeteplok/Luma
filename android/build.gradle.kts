@@ -1,15 +1,19 @@
-allprojects {
+// Google Services plugin — diperlukan untuk google_sign_in
+// buildscript HARUS di atas allprojects dan punya repositories sendiri
+buildscript {
     repositories {
         google()
         mavenCentral()
     }
-}
-
-// Google Services plugin — diperlukan untuk google_sign_in
-// Versi harus sesuai dengan yang ada di google-services.json
-buildscript {
     dependencies {
         classpath("com.google.gms:google-services:4.4.2")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
     }
 }
 

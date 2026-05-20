@@ -1,53 +1,84 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:luma/domain/services/orb_state_engine.dart';
 
 export 'package:luma/domain/services/orb_state_engine.dart' show OrbState;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  VISUAL SPEC PER STATE
-// ─────────────────────────────────────────────────────────────────────────────
+//  PALETTE — Bioluminescence (Laut Dalam)
 //
-//  Dawn  — 1-2 layer, blur tinggi (σ=24-28), opacity 0.4-0.55, napas lambat 6s
-//  Calm  — 3 layer konsentris, blur rendah (σ=10-16), opacity 0.55-0.75, stabil
-//  Wave  — 3-4 layer tumpang tindih, blur medium (σ=14-20), ripple cepat 3.5s
-//  Mist  — 2 layer, blur sangat tinggi (σ=28-36), opacity 0.30-0.40, napas 8s
+//  Terinspirasi dari plankton bercahaya di malam hari.
+//  Organik, hidup, tidak agresif — tidak ada referensi tech/AI.
 //
+//  Dawn  → teal sangat gelap, seperti laut sebelum fajar
+//  Calm  → hijau laut dalam, stabil dan tenang
+//  Wave  → biru abu-abu, seperti ombak malam yang bergerak
+//  Mist  → abu-abu hampir hitam, kehadiran tanpa bentuk
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Konfigurasi visual satu state orb
-class _OrbConfig {
-  final List<_LayerSpec> layers;
+class _OrbPalette {
+  /// Warna inti (layer paling dalam)
+  final Color core;
+
+  /// Warna tengah
+  final Color mid;
+
+  /// Warna luar (paling redup)
+  final Color outer;
+
+  /// Intensitas gelombang — seberapa "gelisah" tepi orb
+  final double waveIntensity;
+
+  /// Jumlah titik bezier — lebih banyak = lebih bergerigi
+  final int wavePoints;
+
+  /// Durasi satu siklus napas
   final Duration breathDuration;
-  final double breathRangeOuter; // ± dari 1.0
-  final double breathRangeMid;
-  final double breathRangeInner;
 
-  const _OrbConfig({
-    required this.layers,
+  const _OrbPalette({
+    required this.core,
+    required this.mid,
+    required this.outer,
+    required this.waveIntensity,
+    required this.wavePoints,
     required this.breathDuration,
-    this.breathRangeOuter = 0.06,
-    this.breathRangeMid = 0.04,
-    this.breathRangeInner = 0.02,
   });
 }
 
-class _LayerSpec {
-  final double sizeRatio;   // relatif terhadap orbSize
-  final Color color;
-  final double blurRadius;
-  final double opacity;
-  final Offset offset;      // untuk Wave: layer tumpang tindih
-
-  const _LayerSpec({
-    required this.sizeRatio,
-    required this.color,
-    required this.blurRadius,
-    required this.opacity,
-    this.offset = Offset.zero,
-  });
-}
+const _palettes = {
+  OrbState.dawn: _OrbPalette(
+    core:  Color(0xFF1A5A5A), // teal redup — belum sepenuhnya terbentuk
+    mid:   Color(0xFF0F3A3A),
+    outer: Color(0xFF0A2626),
+    waveIntensity: 0.045,    // sangat halus — masih belajar
+    wavePoints: 7,
+    breathDuration: Duration(milliseconds: 6500),
+  ),
+  OrbState.calm: _OrbPalette(
+    core:  Color(0xFF1E6A50), // hijau laut dalam — stabil
+    mid:   Color(0xFF144A38),
+    outer: Color(0xFF0C2E22),
+    waveIntensity: 0.030,    // paling halus — tenang
+    wavePoints: 8,
+    breathDuration: Duration(milliseconds: 5500),
+  ),
+  OrbState.wave: _OrbPalette(
+    core:  Color(0xFF1A3A5A), // biru abu-abu — bergerak
+    mid:   Color(0xFF102840),
+    outer: Color(0xFF0A1A2E),
+    waveIntensity: 0.075,    // lebih bergelombang — tersebar
+    wavePoints: 11,
+    breathDuration: Duration(milliseconds: 3800),
+  ),
+  OrbState.mist: _OrbPalette(
+    core:  Color(0xFF252525), // abu-abu hampir hitam — hadir tanpa bentuk
+    mid:   Color(0xFF1A1A1A),
+    outer: Color(0xFF111111),
+    waveIntensity: 0.018,    // hampir tidak bergerak
+    wavePoints: 6,
+    breathDuration: Duration(milliseconds: 9000),
+  ),
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  AMBIENT ORB WIDGET
@@ -55,10 +86,10 @@ class _LayerSpec {
 
 /// AmbientOrb — Cermin visual ritme digital Luma.
 ///
-/// Berevolusi perlahan berdasarkan pola perilaku:
-///   Dawn → Calm → Wave → Mist
-///
-/// Tidak ada label. Tidak ada angka. Hanya kehadiran.
+/// Menggunakan CustomPainter dengan bezier organik per titik —
+/// bukan ScaleTransition yang mekanis.
+/// Setiap layer bergerak dengan fase sinus berbeda (staggered),
+/// menciptakan ilusi cairan yang bernapas.
 class AmbientOrb extends StatefulWidget {
   final OrbState state;
   final double size;
@@ -78,17 +109,14 @@ class AmbientOrb extends StatefulWidget {
 class _AmbientOrbState extends State<AmbientOrb>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late List<Animation<double>> _scaleAnims;
-  late List<Animation<Offset>> _offsetAnims; // untuk Wave ripple
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: _configFor(widget.state).breathDuration,
+      duration: _palettes[widget.state]!.breathDuration,
     );
-    _buildAnimations(widget.state);
     if (!widget.reduceMotion) _controller.repeat();
   }
 
@@ -97,88 +125,13 @@ class _AmbientOrbState extends State<AmbientOrb>
     super.didUpdateWidget(oldWidget);
 
     if (widget.state != oldWidget.state) {
-      final newConfig = _configFor(widget.state);
-      _controller.duration = newConfig.breathDuration;
-      _buildAnimations(widget.state);
+      _controller.duration = _palettes[widget.state]!.breathDuration;
       if (!widget.reduceMotion) _controller.repeat();
     }
 
     if (widget.reduceMotion != oldWidget.reduceMotion) {
-      if (widget.reduceMotion) {
-        _controller.stop();
-      } else {
-        _controller.repeat();
-      }
+      widget.reduceMotion ? _controller.stop() : _controller.repeat();
     }
-  }
-
-  void _buildAnimations(OrbState state) {
-    final cfg = _configFor(state);
-    final ranges = [cfg.breathRangeOuter, cfg.breathRangeMid, cfg.breathRangeInner];
-    final phaseOffsets = [0.0, 1 / 3, 2 / 3];
-
-    _scaleAnims = List.generate(
-      cfg.layers.length.clamp(1, 4),
-      (i) {
-        final range = i < ranges.length ? ranges[i] : cfg.breathRangeInner;
-        final phase = i < phaseOffsets.length ? phaseOffsets[i] : 0.0;
-        return _buildScaleAnim(range: range, phaseOffset: phase);
-      },
-    );
-
-    // Wave: layer ke-3 dan ke-4 punya offset horizontal yang berosilasi
-    if (state == OrbState.wave) {
-      _offsetAnims = [
-        _buildOffsetAnim(Offset.zero),
-        _buildOffsetAnim(Offset.zero),
-        _buildOffsetAnim(const Offset(0.12, 0.0)),  // bergeser kanan
-        _buildOffsetAnim(const Offset(-0.10, 0.06)), // bergeser kiri-bawah
-      ];
-    } else {
-      _offsetAnims = List.generate(
-        cfg.layers.length,
-        (_) => _buildOffsetAnim(Offset.zero),
-      );
-    }
-  }
-
-  Animation<double> _buildScaleAnim({
-    required double range,
-    required double phaseOffset,
-  }) {
-    final startVal = 1.0 - range + range * 2 *
-        (0.5 + 0.5 * math.sin(phaseOffset * 2 * math.pi));
-
-    return TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(begin: startVal, end: 1.0 + range),
-        weight: (1.0 - phaseOffset) * 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0 + range, end: 1.0 - range),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0 - range, end: startVal),
-        weight: phaseOffset * 50,
-      ),
-    ]).animate(_controller);
-  }
-
-  Animation<Offset> _buildOffsetAnim(Offset maxOffset) {
-    if (maxOffset == Offset.zero) {
-      return ConstantTween<Offset>(Offset.zero).animate(_controller);
-    }
-    return TweenSequence<Offset>([
-      TweenSequenceItem(
-        tween: Tween(begin: Offset.zero, end: maxOffset),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: maxOffset, end: Offset.zero),
-        weight: 50,
-      ),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -189,261 +142,237 @@ class _AmbientOrbState extends State<AmbientOrb>
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.size;
-    // Canvas harus cukup besar untuk blur terbesar (σ=36 → butuh ~108px padding)
-    // Rumus: padding = blurRadius * 3 (agar blur tidak terpotong di tepi)
-    final maxBlur = _configFor(widget.state).layers
-        .map((l) => l.blurRadius)
-        .reduce((a, b) => a > b ? a : b);
-    final canvasSize = s + maxBlur * 3;
+    final palette = _palettes[widget.state]!;
+    // Canvas lebih besar agar aura luar tidak terpotong
+    // Aura spread = size * 0.4, jadi padding = size * 0.45 di setiap sisi
+    final canvasSize = widget.size * 1.9;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1600),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, anim) => FadeTransition(
-        opacity: anim,
-        child: child,
-      ),
+      transitionBuilder: (child, anim) =>
+          FadeTransition(opacity: anim, child: child),
       child: RepaintBoundary(
         key: ValueKey(widget.state),
         child: SizedBox(
           width: canvasSize,
           height: canvasSize,
           child: widget.reduceMotion
-              ? _buildStatic(s)
+              ? CustomPaint(
+                  painter: _OrbPainter(
+                    progress: 0.0,
+                    palette: palette,
+                    orbSize: widget.size,
+                  ),
+                )
               : AnimatedBuilder(
                   animation: _controller,
-                  builder: (_, child) => _buildAnimated(s),
+                  builder: (_, child) => CustomPaint(
+                    painter: _OrbPainter(
+                      progress: _controller.value,
+                      palette: palette,
+                      orbSize: widget.size,
+                    ),
+                  ),
                 ),
         ),
       ),
     );
   }
-
-  Widget _buildStatic(double s) {
-    final cfg = _configFor(widget.state);
-    return Stack(
-      alignment: Alignment.center,
-      children: cfg.layers.map((layer) {
-        return _OrbLayer(
-          size: s * layer.sizeRatio,
-          color: layer.color,
-          blurRadius: layer.blurRadius,
-          opacity: layer.opacity,
-          offset: Offset.zero,
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildAnimated(double s) {
-    final cfg = _configFor(widget.state);
-    return Stack(
-      alignment: Alignment.center,
-      children: List.generate(cfg.layers.length, (i) {
-        final layer = cfg.layers[i];
-        final scale = i < _scaleAnims.length ? _scaleAnims[i].value : 1.0;
-        final offset = i < _offsetAnims.length
-            ? _offsetAnims[i].value * s
-            : Offset.zero;
-        return _OrbLayer(
-          size: s * layer.sizeRatio * scale,
-          color: layer.color,
-          blurRadius: layer.blurRadius,
-          opacity: layer.opacity,
-          offset: offset,
-        );
-      }),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  LAYER WIDGET
+//  ORB PAINTER — bezier organik multi-layer
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _OrbLayer extends StatelessWidget {
-  final double size;
-  final Color color;
-  final double blurRadius;
-  final double opacity;
-  final Offset offset;
+class _OrbPainter extends CustomPainter {
+  final double progress;
+  final _OrbPalette palette;
+  final double orbSize;
 
-  const _OrbLayer({
-    required this.size,
-    required this.color,
-    required this.blurRadius,
-    required this.opacity,
-    this.offset = Offset.zero,
+  const _OrbPainter({
+    required this.progress,
+    required this.palette,
+    required this.orbSize,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Transform.translate(
-        offset: offset,
-        child: ImageFiltered(
-          imageFilter: ImageFilter.blur(
-            sigmaX: blurRadius,
-            sigmaY: blurRadius,
-            tileMode: TileMode.clamp,
-          ),
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: opacity),
-            ),
-          ),
-        ),
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = orbSize / 2;
+    final t = progress * math.pi * 2; // waktu dalam radian
+
+    // ── Layer 0: Aura luar — pendaran ambient statis ──────────────────────────
+    // Tidak bergerak, hanya memberikan "kedalaman" di sekitar orb
+    _paintAura(canvas, center, maxRadius);
+
+    // ── Layer 1–3: Blob organik dengan fase berbeda ───────────────────────────
+    // Layer terluar → terdalam, opacity naik, ukuran turun
+    final layerConfigs = [
+      _LayerConfig(
+        radiusRatio: 0.88,
+        color: palette.outer,
+        opacity: 0.55,
+        phaseOffset: 0.0,
+        speedMultiplier: 1.0,
       ),
-    );
+      _LayerConfig(
+        radiusRatio: 0.70,
+        color: palette.mid,
+        opacity: 0.70,
+        phaseOffset: math.pi * 0.7,  // fase berbeda — tidak sinkron
+        speedMultiplier: 1.15,
+      ),
+      _LayerConfig(
+        radiusRatio: 0.50,
+        color: palette.core,
+        opacity: 0.85,
+        phaseOffset: math.pi * 1.4,
+        speedMultiplier: 0.85,
+      ),
+    ];
+
+    for (final cfg in layerConfigs) {
+      _paintBlob(canvas, center, maxRadius, t, cfg);
+    }
+
+    // ── Layer 4: Highlight kecil di tengah — titik cahaya ────────────────────
+    _paintCoreHighlight(canvas, center, maxRadius);
   }
+
+  void _paintAura(Canvas canvas, Offset center, double maxRadius) {
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          palette.mid.withValues(alpha: 0.18),
+          palette.outer.withValues(alpha: 0.06),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(
+        Rect.fromCircle(center: center, radius: maxRadius * 1.8),
+      );
+    canvas.drawCircle(center, maxRadius * 1.8, paint);
+  }
+
+  void _paintBlob(
+    Canvas canvas,
+    Offset center,
+    double maxRadius,
+    double t,
+    _LayerConfig cfg,
+  ) {
+    final n = palette.wavePoints;
+    final angleStep = (math.pi * 2) / n;
+    final points = <Offset>[];
+
+    for (int i = 0; i < n; i++) {
+      final angle = i * angleStep;
+      // Harmoni sinus ganda — menghasilkan modulasi tidak periodik sempurna
+      // sehingga terasa acak seperti cairan, bukan mekanis
+      final wave = math.sin(t * cfg.speedMultiplier + cfg.phaseOffset + i * 1.3) *
+          math.cos(t * cfg.speedMultiplier * 0.6 + i * 0.9 + cfg.phaseOffset * 0.5);
+
+      final r = maxRadius * cfg.radiusRatio * (1.0 + wave * palette.waveIntensity);
+      points.add(Offset(
+        center.dx + math.cos(angle) * r,
+        center.dy + math.sin(angle) * r,
+      ));
+    }
+
+    // Hubungkan titik dengan quadratic bezier — kurva halus, bukan garis lurus
+    final path = Path();
+    path.moveTo(
+      (points.last.dx + points.first.dx) / 2,
+      (points.last.dy + points.first.dy) / 2,
+    );
+    for (int i = 0; i < n; i++) {
+      final curr = points[i];
+      final next = points[(i + 1) % n];
+      final midX = (curr.dx + next.dx) / 2;
+      final midY = (curr.dy + next.dy) / 2;
+      path.quadraticBezierTo(curr.dx, curr.dy, midX, midY);
+    }
+    path.close();
+
+    // Gradient radial dari inti ke tepi — memberikan kedalaman volumetrik
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true
+      ..shader = RadialGradient(
+        colors: [
+          cfg.color.withValues(alpha: cfg.opacity),
+          cfg.color.withValues(alpha: cfg.opacity * 0.5),
+          cfg.color.withValues(alpha: 0.0),
+        ],
+        stops: const [0.0, 0.65, 1.0],
+      ).createShader(
+        Rect.fromCircle(center: center, radius: maxRadius * cfg.radiusRatio),
+      );
+
+    canvas.drawPath(path, paint);
+  }
+
+  void _paintCoreHighlight(Canvas canvas, Offset center, double maxRadius) {
+    // Titik cahaya kecil di tengah — seperti bioluminescence yang paling terang
+    // Tidak bergerak, memberikan "pusat gravitasi" visual
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          palette.core.withValues(alpha: 0.45),
+          palette.core.withValues(alpha: 0.0),
+        ],
+      ).createShader(
+        Rect.fromCircle(center: center, radius: maxRadius * 0.18),
+      );
+    canvas.drawCircle(center, maxRadius * 0.18, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbPainter old) =>
+      old.progress != progress ||
+      old.palette != palette ||
+      old.orbSize != orbSize;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  VISUAL CONFIG PER STATE
+//  HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-_OrbConfig _configFor(OrbState state) {
-  return switch (state) {
-    // ── Dawn: 2 layer, blur tinggi, napas lambat 6s ──────────────────────────
-    OrbState.dawn => const _OrbConfig(
-        breathDuration: Duration(milliseconds: 6000),
-        breathRangeOuter: 0.07,
-        breathRangeMid: 0.04,
-        breathRangeInner: 0.02,
-        layers: [
-          _LayerSpec(
-            sizeRatio: 0.90,
-            color: Color(0xFF2A2A5A), // indigo redup
-            blurRadius: 28,
-            opacity: 0.40,
-          ),
-          _LayerSpec(
-            sizeRatio: 0.45,
-            color: Color(0xFF3A3A7A), // indigo sedikit lebih terang
-            blurRadius: 20,
-            opacity: 0.50,
-          ),
-        ],
-      ),
+class _LayerConfig {
+  final double radiusRatio;
+  final Color color;
+  final double opacity;
+  final double phaseOffset;
+  final double speedMultiplier;
 
-    // ── Calm: 3 layer konsentris, blur rendah, stabil ────────────────────────
-    OrbState.calm => const _OrbConfig(
-        breathDuration: Duration(milliseconds: 5000),
-        breathRangeOuter: 0.05,
-        breathRangeMid: 0.03,
-        breathRangeInner: 0.02,
-        layers: [
-          _LayerSpec(
-            sizeRatio: 1.00,
-            color: Color(0xFF3A5A8A), // biru dalam
-            blurRadius: 16,
-            opacity: 0.55,
-          ),
-          _LayerSpec(
-            sizeRatio: 0.65,
-            color: Color(0xFF5050A0), // indigo
-            blurRadius: 12,
-            opacity: 0.65,
-          ),
-          _LayerSpec(
-            sizeRatio: 0.35,
-            color: Color(0xFF7070D0), // biru-ungu terang
-            blurRadius: 8,
-            opacity: 0.75,
-          ),
-        ],
-      ),
-
-    // ── Wave: 4 layer tumpang tindih, ripple cepat 3.5s ─────────────────────
-    OrbState.wave => const _OrbConfig(
-        breathDuration: Duration(milliseconds: 3500),
-        breathRangeOuter: 0.08,
-        breathRangeMid: 0.06,
-        breathRangeInner: 0.05,
-        layers: [
-          _LayerSpec(
-            sizeRatio: 0.90,
-            color: Color(0xFF3A2A5A), // ungu tua
-            blurRadius: 20,
-            opacity: 0.45,
-          ),
-          _LayerSpec(
-            sizeRatio: 0.65,
-            color: Color(0xFF5A3A7A), // ungu medium
-            blurRadius: 16,
-            opacity: 0.50,
-          ),
-          _LayerSpec(
-            sizeRatio: 0.50,
-            color: Color(0xFF7A4A9A), // ungu lebih terang
-            blurRadius: 14,
-            opacity: 0.45,
-            offset: Offset(0.12, 0.0), // tumpang tindih kanan
-          ),
-          _LayerSpec(
-            sizeRatio: 0.40,
-            color: Color(0xFF9A6AAA), // lavender
-            blurRadius: 12,
-            opacity: 0.40,
-            offset: Offset(-0.10, 0.06), // tumpang tindih kiri-bawah
-          ),
-        ],
-      ),
-
-    // ── Mist: 2 layer, blur sangat tinggi, napas sangat lambat 8s ───────────
-    OrbState.mist => const _OrbConfig(
-        breathDuration: Duration(milliseconds: 8000),
-        breathRangeOuter: 0.03,
-        breathRangeMid: 0.02,
-        breathRangeInner: 0.01,
-        layers: [
-          _LayerSpec(
-            sizeRatio: 1.00,
-            color: Color(0xFF4A4A6A), // abu-abu kebiruan
-            blurRadius: 36,
-            opacity: 0.30,
-          ),
-          _LayerSpec(
-            sizeRatio: 0.55,
-            color: Color(0xFF5A5A7A), // sedikit lebih terang
-            blurRadius: 28,
-            opacity: 0.38,
-          ),
-        ],
-      ),
-  };
+  const _LayerConfig({
+    required this.radiusRatio,
+    required this.color,
+    required this.opacity,
+    required this.phaseOffset,
+    required this.speedMultiplier,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  LEGACY COMPAT — untuk kode yang masih pakai AmbientMood
+//  LEGACY COMPAT
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// @deprecated Gunakan OrbState langsung.
-/// Dipertahankan agar tidak ada breaking change di kode lain.
-@Deprecated('Gunakan OrbState. AmbientMood akan dihapus di versi berikutnya.')
+@Deprecated('Gunakan OrbState. AmbientMood akan dihapus.')
 enum AmbientMood { focus, gentle, shifting, rest }
 
-/// @deprecated
 @Deprecated('Gunakan OrbState langsung.')
-OrbState orbStateFromMood(AmbientMood mood) {
-  return switch (mood) {
-    AmbientMood.focus => OrbState.calm,
-    AmbientMood.gentle => OrbState.dawn,
-    AmbientMood.shifting => OrbState.wave,
-    AmbientMood.rest => OrbState.mist,
-  };
-}
+OrbState orbStateFromMood(AmbientMood mood) => switch (mood) {
+      AmbientMood.focus => OrbState.calm,
+      AmbientMood.gentle => OrbState.dawn,
+      AmbientMood.shifting => OrbState.wave,
+      AmbientMood.rest => OrbState.mist,
+    };
 
-/// Helper: map insight severity ke OrbState (untuk fallback saat engine belum siap)
-OrbState orbStateFromSeverity(String severity) {
-  return switch (severity.toLowerCase()) {
-    'gentle' || 'positive' => OrbState.calm,
-    'notice' || 'warning' || 'critical' => OrbState.wave,
-    _ => OrbState.calm,
-  };
-}
+OrbState orbStateFromSeverity(String severity) => switch (severity.toLowerCase()) {
+      'gentle' || 'positive' => OrbState.calm,
+      'notice' || 'warning' || 'critical' => OrbState.wave,
+      _ => OrbState.calm,
+    };

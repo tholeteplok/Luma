@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.luma"
+    namespace = "com.tholteplok.luma"
     compileSdk = 36
     ndkVersion = "28.2.13676358"
 
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.luma"
+        applicationId = "com.tholteplok.luma"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

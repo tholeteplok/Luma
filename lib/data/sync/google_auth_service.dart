@@ -49,15 +49,8 @@ class GoogleAuthService {
 
   /// Web OAuth Client ID dari Google Cloud Console.
   /// Diperlukan agar accessToken bisa dipakai googleapis di Android.
-  ///
-  /// Cara dapat:
-  /// 1. Google Cloud Console → APIs & Services → Credentials
-  /// 2. Create OAuth Client ID → Web application
-  /// 3. Copy "Client ID" (bukan secret)
-  ///
-  /// GANTI nilai ini dengan Client ID milikmu:
   static const _webClientId =
-      'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+      '329400324837-oqc1cqj9ttut0ppdjohd91f5u539ufo5.apps.googleusercontent.com';
 
   /// Apakah platform ini mendukung Google Sign-In
   static bool get isPlatformSupported {

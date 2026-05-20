@@ -1,67 +1,41 @@
 {
-  "_SETUP_INSTRUCTIONS": [
-    "File ini adalah TEMPLATE. Ganti dengan google-services.json asli dari Google Cloud Console.",
-    "",
-    "LANGKAH SETUP:",
-    "1. Buka https://console.cloud.google.com",
-    "2. Buat project baru atau pilih yang sudah ada",
-    "3. Enable 'Google Drive API' di APIs & Services > Library",
-    "4. Buat OAuth 2.0 Credentials:",
-    "   a. APIs & Services > Credentials > Create Credentials > OAuth Client ID",
-    "   b. Application type: Android",
-    "   c. Package name: com.example.luma",
-    "   d. SHA-1 fingerprint: jalankan perintah ini di terminal:",
-    "      keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android",
-    "      Ambil nilai SHA1 dari output",
-    "5. Buat JUGA OAuth Client ID untuk Web application (diperlukan untuk accessToken):",
-    "   a. Application type: Web application",
-    "   b. Tidak perlu Authorized redirect URIs untuk mobile",
-    "   c. Copy 'Client ID' ini ke google_auth_service.dart sebagai _webClientId",
-    "6. Download google-services.json dari project settings:",
-    "   a. Project Settings (gear icon) > General > Your apps > Android app",
-    "   b. Download google-services.json",
-    "   c. Taruh di android/app/google-services.json (ganti file ini)",
-    "",
-    "PENTING: Jangan commit google-services.json ke git jika berisi data sensitif.",
-    "File ini sudah ada di .gitignore."
-  ],
   "project_info": {
-    "project_number": "GANTI_DENGAN_PROJECT_NUMBER",
-    "project_id": "GANTI_DENGAN_PROJECT_ID",
-    "storage_bucket": "GANTI_DENGAN_PROJECT_ID.appspot.com"
+    "project_number": "329400324837",
+    "project_id": "luma-74495",
+    "storage_bucket": "luma-74495.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:PROJECT_NUMBER:android:APP_ID",
+        "mobilesdk_app_id": "1:329400324837:android:f091d46cd48c7b7012ba0c",
         "android_client_info": {
-          "package_name": "com.example.luma"
+          "package_name": "com.tholteplok.luma"
         }
       },
       "oauth_client": [
         {
-          "client_id": "GANTI_DENGAN_ANDROID_CLIENT_ID.apps.googleusercontent.com",
+          "client_id": "329400324837-rfg70uql57mrgrei4ham6gbjp4is9i67.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.luma",
-            "certificate_hash": "GANTI_DENGAN_SHA1_FINGERPRINT"
+            "package_name": "com.tholteplok.luma",
+            "certificate_hash": "d8eb27073f0abc954ffd61ba4d5322fae2badcb3"
           }
         },
         {
-          "client_id": "GANTI_DENGAN_WEB_CLIENT_ID.apps.googleusercontent.com",
+          "client_id": "329400324837-oqc1cqj9ttut0ppdjohd91f5u539ufo5.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "GANTI_DENGAN_API_KEY"
+          "current_key": "AIzaSyAdqvzRcrTWr_S2wg47uq7FNRCD-c2s4K0"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "GANTI_DENGAN_WEB_CLIENT_ID.apps.googleusercontent.com",
+              "client_id": "329400324837-oqc1cqj9ttut0ppdjohd91f5u539ufo5.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

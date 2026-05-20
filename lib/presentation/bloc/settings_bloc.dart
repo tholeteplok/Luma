@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/backup/drive_backup_manager.dart';
 import '../../data/db/database_service.dart';
 import '../../data/db/models/models.dart';
+import '../../data/sync/google_auth_service.dart';
 import '../../core/services/background_task_manager.dart';
 
 /// Settings state untuk mengelola preferensi user
@@ -18,6 +19,9 @@ class SettingsState {
   final bool isRestoring;
   final bool reduceMotion; // Aksesibilitas: matikan animasi organik
 
+  /// Email akun Google yang terhubung untuk backup (null = belum sign-in)
+  final String? connectedEmail;
+
   const SettingsState({
     this.isLoading = false,
     this.error,
@@ -30,6 +34,7 @@ class SettingsState {
     this.isBackingUp = false,
     this.isRestoring = false,
     this.reduceMotion = false,
+    this.connectedEmail,
   });
 
   SettingsState copyWith({
@@ -44,7 +49,9 @@ class SettingsState {
     bool? isBackingUp,
     bool? isRestoring,
     bool? reduceMotion,
+    String? connectedEmail,
     bool clearError = false,
+    bool clearConnectedEmail = false,
   }) {
     return SettingsState(
       isLoading: isLoading ?? this.isLoading,
@@ -58,6 +65,7 @@ class SettingsState {
       isBackingUp: isBackingUp ?? this.isBackingUp,
       isRestoring: isRestoring ?? this.isRestoring,
       reduceMotion: reduceMotion ?? this.reduceMotion,
+      connectedEmail: clearConnectedEmail ? null : (connectedEmail ?? this.connectedEmail),
     );
   }
 
@@ -92,6 +100,7 @@ class SettingsNotifier extends ChangeNotifier {
   bool get isBackingUp => _state.isBackingUp;
   bool get isRestoring => _state.isRestoring;
   bool get reduceMotion => _state.reduceMotion;
+  String? get connectedEmail => _state.connectedEmail;
 
   /// Toggle reduce motion
   void toggleReduceMotion() {
@@ -204,9 +213,12 @@ class SettingsNotifier extends ChangeNotifier {
     try {
       final fileName = await _backupManager.backup();
       if (fileName != null) {
+        // Ambil email akun yang terhubung setelah backup berhasil
+        final email = GoogleAuthService().currentAccount?.email;
         _state = _state.copyWith(
           isBackingUp: false,
           lastBackupDate: DateTime.now(),
+          connectedEmail: email,
         );
         notifyListeners();
         return true;

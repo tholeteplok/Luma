@@ -196,13 +196,14 @@ class _BackupSectionState extends State<_BackupSection> {
   Widget build(BuildContext context) {
     final p = context.luma;
     final s = widget.settings;
+    final isId = widget.isId;
     return _SettingsCard(
       children: [
         // Narasi emosional
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           child: Text(
-            widget.isId
+            isId
                 ? '"Jika ingin menjaga detail lebih lama, simpan salinan ke Google Drive.\n\nJika tidak, Luma akan merangkumnya seperti ingatan biasa."'
                 : '"If you want to keep details longer, save a copy to Google Drive.\n\nIf not, Luma will summarize them like ordinary memory."',
             style: GoogleFonts.cormorantGaramond(
@@ -216,18 +217,52 @@ class _BackupSectionState extends State<_BackupSection> {
         const SizedBox(height: 4),
         _Divider(),
 
-        // Last backup info
+        // ── Info akun terhubung ──────────────────────────────────────────────
+        if (s.connectedEmail != null) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                Icon(Icons.account_circle_outlined, size: 14, color: p.gentleText),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    s.connectedEmail!,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      color: p.gentleText,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // ── Waktu backup terakhir ────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
           child: Row(
             children: [
               Icon(Icons.history, size: 14, color: p.textSubtle),
               const SizedBox(width: 6),
               Text(
-                _formatBackupDate(s.lastBackupDate),
+                isId ? 'Terakhir: ' : 'Last: ',
                 style: GoogleFonts.dmSans(
                   fontSize: 12,
                   color: p.textSubtle,
+                ),
+              ),
+              Text(
+                _formatBackupDate(s.lastBackupDate),
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  color: s.lastBackupDate != null ? p.textSecondary : p.textSubtle,
+                  fontWeight: s.lastBackupDate != null
+                      ? FontWeight.w500
+                      : FontWeight.w400,
                 ),
               ),
             ],
@@ -241,22 +276,22 @@ class _BackupSectionState extends State<_BackupSection> {
           child: SizedBox(
             width: double.infinity,
             child: _ActionButton(
-              label: widget.isId ? 'Cadangkan Sekarang' : 'Backup Now',
+              label: isId ? 'Cadangkan Sekarang' : 'Backup Now',
               isLoading: s.isBackingUp,
               onPressed: s.isBackingUp
                   ? null
                   : () async {
                       final messenger = ScaffoldMessenger.of(context);
+                      final isId = widget.isId;
                       final ok = await s.exportBackup();
-                      if (!ok && mounted) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(s.error ??
-                                (widget.isId
-                                    ? 'Backup gagal'
-                                    : 'Backup failed')),
-                            backgroundColor: p.bgElevated,
-                          ),
+                      if (mounted) {
+                        // ignore: use_build_context_synchronously
+                        _showSnackBar(
+                          messenger,
+                          ok
+                              ? (isId ? 'Cadangan berhasil disimpan.' : 'Backup saved successfully.')
+                              : (s.error ?? (isId ? 'Backup gagal.' : 'Backup failed.')),
+                          isSuccess: ok,
                         );
                       }
                     },
@@ -271,7 +306,7 @@ class _BackupSectionState extends State<_BackupSection> {
           child: SizedBox(
             width: double.infinity,
             child: _ActionButton(
-              label: widget.isId ? 'Pulihkan dari Drive' : 'Restore from Drive',
+              label: isId ? 'Pulihkan dari Drive' : 'Restore from Drive',
               isLoading: s.isRestoring,
               isPrimary: false,
               onPressed: (s.isRestoring || s.lastBackupDate == null)
@@ -285,16 +320,47 @@ class _BackupSectionState extends State<_BackupSection> {
 
         // Auto-backup toggle
         _SwitchTile(
-          title: widget.isId
-              ? 'Cadangan otomatis tiap Minggu'
-              : 'Auto-backup every Sunday',
-          subtitle: widget.isId
-              ? 'Hanya saat charging + WiFi'
-              : 'Only when charging + WiFi',
+          title: isId ? 'Cadangan otomatis tiap Minggu' : 'Auto-backup every Sunday',
+          subtitle: isId ? 'Hanya saat charging + WiFi' : 'Only when charging + WiFi',
           value: s.autoBackupEnabled,
           onChanged: (_) => s.toggleAutoBackup(),
         ),
       ],
+    );
+  }
+
+  /// SnackBar dengan kontras yang benar — teks selalu terbaca
+  void _showSnackBar(
+    ScaffoldMessengerState messenger,
+    String message, {
+    required bool isSuccess,
+  }) {
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.dmSans(
+            fontSize: 13,
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: isSuccess
+            ? const Color(0xFF1E4A38)
+            : const Color(0xFF3A1A10),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        duration: const Duration(seconds: 4),
+        action: isSuccess
+            ? null
+            : SnackBarAction(
+                label: 'OK',
+                textColor: const Color(0xFFEEE8B2),
+                onPressed: () => messenger.clearSnackBars(),
+              ),
+      ),
     );
   }
 
@@ -375,13 +441,11 @@ class _BackupSectionState extends State<_BackupSection> {
     if (confirm == true && mounted) {
       await s.importBackup();
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(widget.isId
-                ? 'Pemulihan selesai'
-                : 'Restore complete'),
-            backgroundColor: p.bgElevated,
-          ),
+        // ignore: use_build_context_synchronously
+        _showSnackBar(
+          messenger,
+          widget.isId ? 'Pemulihan selesai.' : 'Restore complete.',
+          isSuccess: true,
         );
       }
     }

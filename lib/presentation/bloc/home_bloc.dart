@@ -330,7 +330,7 @@ class HomeNotifier extends ChangeNotifier {
         insights: [
           {
             'id': '0',
-            'title': 'Luma baru mulai mengenal ritmu.',
+            'title': 'Luma baru mulai mengenal ritmemu.',
             'message':
                 'Dalam beberapa hari ke depan, cerminan pertama akan muncul.',
             'severity': 'gentle',

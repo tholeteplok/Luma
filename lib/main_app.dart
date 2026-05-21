@@ -8,6 +8,7 @@ import '../presentation/bloc/theme_bloc.dart';
 import '../presentation/pages/onboarding_page.dart';
 import '../presentation/pages/permission_gateway_page.dart';
 import '../presentation/pages/main_shell.dart';
+import 'core/services/background_task_manager.dart';
 
 /// Main app widget dengan routing dan theme support.
 ///
@@ -35,13 +36,20 @@ class _MainAppState extends State<MainApp> {
 
   Future<void> _checkStatuses() async {
     final prefs = await SharedPreferences.getInstance();
+    final completedGate = prefs.getBool('permission_gate_completed') ?? false;
+    final completedOnboarding = prefs.getBool('onboarding_completed') ?? false;
+
     if (mounted) {
       setState(() {
-        _hasCompletedPermissionGate =
-            prefs.getBool('permission_gate_completed') ?? false;
-        _hasCompletedOnboarding =
-            prefs.getBool('onboarding_completed') ?? false;
+        _hasCompletedPermissionGate = completedGate;
+        _hasCompletedOnboarding = completedOnboarding;
       });
+    }
+
+    // COLD START (PENGGUNA LAMA)
+    // Jika perizinan sudah diberikan sebelumnya, langsung inisialisasi & trigger task pertama
+    if (completedGate) {
+      _initializeAndTriggerBackgroundTasks();
     }
   }
 
@@ -50,6 +58,25 @@ class _MainAppState extends State<MainApp> {
     await prefs.setBool('permission_gate_completed', true);
     if (mounted) {
       setState(() => _hasCompletedPermissionGate = true);
+    }
+
+    // NEW LAUNCH (PENGGUNA BARU)
+    // Segera setelah izin usage stats diberikan, inisialisasi & trigger task pertama
+    _initializeAndTriggerBackgroundTasks();
+  }
+
+  /// Menginisialisasi WorkManager dan memicu manual task pertama (Scenario 2)
+  Future<void> _initializeAndTriggerBackgroundTasks() async {
+    try {
+      // 1. Inisialisasi WorkManager & daftarkan task periodik
+      await BackgroundTaskInitializer.initialize();
+      
+      // 2. Trigger Scenario 2 (Manual aggregateEvents) sebagai pemicu awal instan
+      await BackgroundTaskInitializer.triggerManualTask(BackgroundTasks.aggregateEvents);
+      
+      debugPrint('🚀 [MainApp] Background tasks initialized & first aggregation triggered');
+    } catch (e) {
+      debugPrint('❌ [MainApp] Failed to initialize background tasks: $e');
     }
   }
 

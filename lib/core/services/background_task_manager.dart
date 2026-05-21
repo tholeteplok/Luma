@@ -67,6 +67,9 @@ Future<void> _aggregateEventsTask(DatabaseService dbService) async {
     screenListener: ScreenStateListener(),
   );
   
+  // Kumpulkan data penggunaan aplikasi (app usage) terbaru terlebih dahulu ke DB
+  await aggregator.collectAppUsage();
+  
   // Get unaggregated events dari 1 jam terakhir
   final now = DateTime.now();
   final oneHourAgo = now.subtract(const Duration(hours: 1));

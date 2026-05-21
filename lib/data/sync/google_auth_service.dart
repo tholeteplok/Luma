@@ -72,15 +72,20 @@ class GoogleAuthService {
         return null;
       }
 
-      // Pastikan scope drive.appdata sudah di-grant
-      final hasScope = await _googleSignIn.requestScopes(_scopes);
-      debugPrint('[GoogleAuthService] requestScopes result: $hasScope');
-      if (!hasScope) {
-        debugPrint('[GoogleAuthService] Scope drive.appdata tidak di-grant user');
-        return null;
-      }
-
       _currentAccount = account;
+
+      // Cek apakah scope sudah di-grant (tanpa dialog tambahan)
+      // Jika belum, requestScopes akan tampilkan dialog consent
+      final scopeGranted = await _googleSignIn.canAccessScopes(_scopes);
+      debugPrint('[GoogleAuthService] canAccessScopes: $scopeGranted');
+      if (!scopeGranted) {
+        final requested = await _googleSignIn.requestScopes(_scopes);
+        debugPrint('[GoogleAuthService] requestScopes result: $requested');
+        if (!requested) {
+          debugPrint('[GoogleAuthService] Scope drive.appdata tidak di-grant user');
+          return null;
+        }
+      }
 
       // Gunakan extension untuk mendapatkan AuthClient yang valid
       final client = await _googleSignIn.authenticatedClient();

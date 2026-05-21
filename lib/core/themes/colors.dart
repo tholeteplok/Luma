@@ -289,3 +289,20 @@ extension LumaPaletteContext on BuildContext {
   LumaPalette get luma =>
       Theme.of(this).extension<LumaPalette>() ?? LumaPalette.dark;
 }
+
+extension LumaLayoutContext on BuildContext {
+  /// Tinggi LumaNavBar secara tersentralisasi.
+  double get lumaNavBarHeight => 64.0;
+
+  /// Jarak bawah dinamis (NavBar + buffer + padding sistem gesture Android/iOS).
+  double get lumaScreenBottomSpacing =>
+      lumaNavBarHeight + 20.0 + MediaQuery.of(this).padding.bottom;
+
+  /// Widget spacer non-sliver untuk akhir halaman scrollable non-sliver (seperti ListView).
+  Widget get lumaBottomSpacer => SizedBox(height: lumaScreenBottomSpacing);
+
+  /// Widget spacer sliver untuk akhir halaman scrollable sliver (seperti CustomScrollView).
+  Widget get lumaSliverBottomSpacer => SliverToBoxAdapter(
+        child: lumaBottomSpacer,
+      );
+}

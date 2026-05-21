@@ -160,7 +160,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              context.lumaBottomSpacer,
             ],
           ),
         );

@@ -114,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                  context.lumaSliverBottomSpacer,
                 ],
               ),
             ],

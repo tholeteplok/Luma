@@ -66,7 +66,7 @@ class RhythmPage extends StatelessWidget {
                     childCount: history.length,
                   ),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+              context.lumaSliverBottomSpacer,
             ],
           );
         },

@@ -51,6 +51,7 @@ dependencies:
   google_sign_in: ^6.1.0
   googleapis: ^12.0.0           # Google Drive API (ADR-001)
   googleapis_auth: ^1.4.1       # Auth client untuk googleapis
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12  # Bridge GoogleSignIn → AuthClient
   http: ^1.1.0                  # HTTP client helper untuk Drive API
   # google_sign_in_web: REMOVED — mobile only for MVP
 

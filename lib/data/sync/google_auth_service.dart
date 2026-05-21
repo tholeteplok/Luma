@@ -1,126 +1,101 @@
+import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis_auth/googleapis_auth.dart' as auth;
-import 'package:http/http.dart' as http;
 
 /// GoogleAuthService — Mengelola siklus hidup Google Sign-In dan AuthClient.
 ///
-/// ## Setup yang dibutuhkan (WAJIB sebelum backup bisa jalan):
+/// Menggunakan `extension_google_sign_in_as_googleapis_auth` untuk mendapatkan
+/// AuthClient yang valid dari GoogleSignIn — ini adalah cara resmi Google.
 ///
-/// 1. Buat project di https://console.cloud.google.com
-/// 2. Enable "Google Drive API"
-/// 3. Buat OAuth 2.0 Client ID:
-///    - Type: Android
-///    - Package name: com.example.luma  (sesuai applicationId di build.gradle.kts)
-///    - SHA-1: jalankan `keytool -list -v -keystore ~/.android/debug.keystore`
-///      password default: android
-/// 4. Download `google-services.json` → taruh di `android/app/google-services.json`
-/// 5. Tambahkan ke android/app/build.gradle.kts:
-///    plugins { id("com.google.gms.google-services") }
-/// 6. Tambahkan ke android/build.gradle.kts:
-///    id("com.google.gms.google-services") version "4.4.0" apply false
+/// Masalah sebelumnya: `account.authentication.accessToken` bisa null di Android
+/// karena GIS (Google Identity Services) tidak selalu mengembalikan accessToken
+/// untuk API calls. Package extension ini menyelesaikan masalah itu.
 ///
-/// ## Catatan penting untuk googleapis + google_sign_in:
-///
-/// `google_sign_in` di Android menggunakan Google Identity Services (GIS).
-/// Untuk mendapatkan `accessToken` yang bisa dipakai googleapis (Drive API),
-/// kamu perlu `serverClientId` (Web OAuth Client ID) — bukan Android Client ID.
-///
-/// Alurnya:
-/// GoogleSignIn(serverClientId: WEB_CLIENT_ID) → signIn() →
-/// account.authentication.accessToken → AuthClient → DriveApi
-///
-/// Tanpa serverClientId, accessToken bisa null di Android.
-///
-/// ## Platform support:
-/// - Android: ✅ (butuh google-services.json)
-/// - iOS: ✅ (butuh GoogleService-Info.plist)
-/// - Windows/Linux/macOS desktop: ❌ (tidak didukung google_sign_in)
+/// Platform support:
+/// - Android: ✅
+/// - iOS: ✅
+/// - Windows/Linux/macOS desktop: ❌
 class GoogleAuthService {
   static final GoogleAuthService _instance = GoogleAuthService._internal();
   factory GoogleAuthService() => _instance;
   GoogleAuthService._internal();
 
-  /// Scope minimal untuk backup ke appDataFolder.
-  /// User tidak bisa melihat file Luma di Google Drive UI mereka.
   static const _scopes = [
     'https://www.googleapis.com/auth/drive.appdata',
   ];
 
-  /// Web OAuth Client ID dari Google Cloud Console.
-  /// Diperlukan agar accessToken bisa dipakai googleapis di Android.
   static const _webClientId =
       '329400324837-oqc1cqj9ttut0ppdjohd91f5u539ufo5.apps.googleusercontent.com';
 
-  /// Apakah platform ini mendukung Google Sign-In
-  static bool get isPlatformSupported {
-    return defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-  }
+  static bool get isPlatformSupported =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+
+  bool get isConfigured =>
+      _webClientId != 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
 
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: _scopes,
-    // serverClientId diperlukan untuk mendapatkan accessToken yang valid
-    // di Android. Tanpa ini, accessToken bisa null.
-    serverClientId: _webClientId == 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com'
-        ? null // belum dikonfigurasi — akan gagal dengan pesan yang jelas
-        : _webClientId,
+    serverClientId: _webClientId,
   );
 
   GoogleSignInAccount? _currentAccount;
-  auth.AuthClient? _authClient;
 
-  bool get isSignedIn => _currentAccount != null;
-  bool get isConfigured => _webClientId != 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
   GoogleSignInAccount? get currentAccount => _currentAccount;
+  bool get isSignedIn => _currentAccount != null;
 
   // ─── Sign-In ────────────────────────────────────────────────────────────────
 
-  /// Sign-in interaktif — tampilkan dialog pilih akun Google.
-  ///
-  /// Return null jika:
-  /// - Platform tidak didukung (Windows/Linux/macOS desktop)
-  /// - Belum dikonfigurasi (webClientId masih placeholder)
-  /// - User membatalkan
-  /// - Error teknis
+  /// Sign-in dan return AuthClient yang siap dipakai googleapis.
   Future<auth.AuthClient?> signIn() async {
     if (!isPlatformSupported) {
       debugPrint('[GoogleAuthService] Platform tidak didukung: $defaultTargetPlatform');
       return null;
     }
-
     if (!isConfigured) {
-      debugPrint('[GoogleAuthService] Web Client ID belum dikonfigurasi. '
-          'Lihat komentar di google_auth_service.dart untuk setup.');
+      debugPrint('[GoogleAuthService] Web Client ID belum dikonfigurasi.');
       return null;
     }
 
     try {
-      // Coba silent sign-in dulu (restore session yang sudah ada)
-      final silentAccount = await _googleSignIn.signInSilently();
-      if (silentAccount != null) {
-        _currentAccount = silentAccount;
-        final client = await _buildAuthClient(silentAccount);
-        if (client != null) return client;
-        // Silent berhasil tapi token null — lanjut ke interactive
-      }
+      // Coba silent dulu
+      var account = await _googleSignIn.signInSilently();
 
-      // Tidak ada session atau token expired — tampilkan dialog
-      final account = await _googleSignIn.signIn();
+      // Jika silent gagal atau scope belum granted, lakukan interactive sign-in
+      account ??= await _googleSignIn.signIn();
+
       if (account == null) {
         debugPrint('[GoogleAuthService] Sign-in dibatalkan user');
         return null;
       }
 
+      // Pastikan scope drive.appdata sudah di-grant
+      final hasScope = await _googleSignIn.requestScopes(_scopes);
+      if (!hasScope) {
+        debugPrint('[GoogleAuthService] Scope drive.appdata tidak di-grant user');
+        return null;
+      }
+
       _currentAccount = account;
-      return await _buildAuthClient(account);
+
+      // Gunakan extension untuk mendapatkan AuthClient yang valid
+      // Ini adalah cara resmi — menghindari masalah accessToken null
+      final client = await _googleSignIn.authenticatedClient();
+      if (client == null) {
+        debugPrint('[GoogleAuthService] authenticatedClient() return null');
+        return null;
+      }
+
+      debugPrint('[GoogleAuthService] AuthClient berhasil untuk ${account.email}');
+      return client;
     } catch (e) {
       debugPrint('[GoogleAuthService] signIn error: $e');
       return null;
     }
   }
 
-  /// Silent sign-in — tidak menampilkan UI, hanya restore session.
+  /// Silent sign-in — tidak menampilkan UI.
   Future<auth.AuthClient?> signInSilently() async {
     if (!isPlatformSupported || !isConfigured) return null;
 
@@ -128,26 +103,24 @@ class GoogleAuthService {
       final account = await _googleSignIn.signInSilently();
       if (account == null) return null;
       _currentAccount = account;
-      return await _buildAuthClient(account);
+
+      final client = await _googleSignIn.authenticatedClient();
+      return client;
     } catch (e) {
       debugPrint('[GoogleAuthService] signInSilently error: $e');
       return null;
     }
   }
 
-  /// Dapatkan AuthClient yang valid — refresh token jika perlu.
+  /// Dapatkan AuthClient yang valid — refresh otomatis via extension.
   Future<auth.AuthClient?> getAuthClient() async {
     if (_currentAccount == null) return null;
-
-    if (_authClient != null) {
-      final creds = _authClient!.credentials;
-      if (!creds.accessToken.hasExpired) {
-        return _authClient;
-      }
+    try {
+      return await _googleSignIn.authenticatedClient();
+    } catch (e) {
+      debugPrint('[GoogleAuthService] getAuthClient error: $e');
+      return null;
     }
-
-    // Token expired — re-authenticate
-    return await _buildAuthClient(_currentAccount!);
   }
 
   // ─── Sign-Out ───────────────────────────────────────────────────────────────
@@ -158,49 +131,9 @@ class GoogleAuthService {
         await _googleSignIn.signOut();
       }
       _currentAccount = null;
-      _authClient?.close();
-      _authClient = null;
       debugPrint('[GoogleAuthService] Signed out');
     } catch (e) {
       debugPrint('[GoogleAuthService] signOut error: $e');
-    }
-  }
-
-  // ─── Internal ───────────────────────────────────────────────────────────────
-
-  Future<auth.AuthClient?> _buildAuthClient(GoogleSignInAccount account) async {
-    try {
-      final googleAuth = await account.authentication;
-      final accessToken = googleAuth.accessToken;
-      final idToken = googleAuth.idToken;
-
-      if (accessToken == null) {
-        debugPrint('[GoogleAuthService] accessToken null. '
-            'Pastikan serverClientId (Web Client ID) sudah dikonfigurasi '
-            'dan google-services.json sudah ada di android/app/.');
-        return null;
-      }
-
-      final credentials = auth.AccessCredentials(
-        auth.AccessToken(
-          'Bearer',
-          accessToken,
-          DateTime.now().toUtc().add(const Duration(hours: 1)),
-        ),
-        null, // refresh token tidak tersedia via google_sign_in
-        _scopes,
-        idToken: idToken,
-      );
-
-      final baseClient = http.Client();
-      _authClient = auth.authenticatedClient(baseClient, credentials);
-
-      debugPrint('[GoogleAuthService] AuthClient berhasil dibuat '
-          'untuk ${account.email}');
-      return _authClient;
-    } catch (e) {
-      debugPrint('[GoogleAuthService] _buildAuthClient error: $e');
-      return null;
     }
   }
 }

@@ -94,16 +94,16 @@ class DriveBackupManager {
   /// Pastikan sudah terinisialisasi — refresh auth jika perlu.
   /// Dipanggil di awal setiap operasi backup/restore/list.
   Future<bool> _ensureInitialized() async {
-    if (_isInitialized) {
-      // Cek apakah token masih valid, refresh jika perlu
-      final freshClient = await _auth.getAuthClient();
-      if (freshClient != null) {
-        // Selalu update DriveApi dengan client terbaru (token mungkin di-refresh)
-        _driveApi = drive.DriveApi(freshClient);
-        await _keyManager.initialize(freshClient);
-      }
+    // Selalu coba refresh client (token bisa expired)
+    final freshClient = await _auth.getAuthClient();
+    if (freshClient != null) {
+      _driveApi = drive.DriveApi(freshClient);
+      await _keyManager.initialize(freshClient);
+      _isInitialized = true;
       return true;
     }
+
+    // Tidak ada client valid — lakukan sign-in
     return initializeWithSignIn();
   }
 

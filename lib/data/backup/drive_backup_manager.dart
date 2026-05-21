@@ -115,41 +115,45 @@ class DriveBackupManager {
   /// Returns: nama file backup yang dibuat, atau null jika gagal
   Future<String?> backup() async {
     final ready = await _ensureInitialized();
+    debugPrint('[DriveBackupManager] _ensureInitialized: $ready, driveApi: ${_driveApi != null}');
     if (!ready || _driveApi == null) {
       debugPrint('[DriveBackupManager] Tidak bisa initialize — backup dibatalkan');
       return null;
     }
 
     try {
-      // 1. Kumpulkan data
+      debugPrint('[DriveBackupManager] Mengumpulkan data...');
       final payload = await _collectBackupData();
+      debugPrint('[DriveBackupManager] Data terkumpul: ${payload.keys.toList()}');
       final payloadJson = jsonEncode(payload);
       final payloadBytes = utf8.encode(payloadJson);
+      debugPrint('[DriveBackupManager] Payload size: ${payloadBytes.length} bytes');
 
-      // 2. Ambil/buat encryption key dan initialize EncryptionService
+      debugPrint('[DriveBackupManager] Mengambil/membuat encryption key...');
       Uint8List encKey;
       final existingKey = await _keyManager.downloadKey();
       if (existingKey != null) {
+        debugPrint('[DriveBackupManager] Key existing ditemukan');
         encKey = existingKey;
       } else {
+        debugPrint('[DriveBackupManager] Membuat key baru...');
         encKey = _keyManager.generateRandomKey();
         await _keyManager.uploadKey(encKey);
+        debugPrint('[DriveBackupManager] Key baru diupload');
       }
-      // Initialize EncryptionService dengan key tersebut
       await _encryption.initialize(encKey);
 
-      // 3. Enkripsi bytes (encryptBytes hanya terima 1 arg, key dikelola internal)
+      debugPrint('[DriveBackupManager] Mengenkripsi data...');
       final encrypted = base64Decode(
         await _encryption.encryptBytes(Uint8List.fromList(payloadBytes)),
       );
+      debugPrint('[DriveBackupManager] Encrypted size: ${encrypted.length} bytes');
 
-      // 4. Upload ke Drive
       final timestamp = DateTime.now().toUtc().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
       final fileName = '$_backupPrefix$timestamp$_backupExtension';
+      debugPrint('[DriveBackupManager] Mengupload ke Drive: $fileName');
 
       await _uploadToDrive(fileName, encrypted);
-
-      // 5. Update lastBackupDate di preferences
       await _updateLastBackupDate(DateTime.now());
 
       debugPrint('[DriveBackupManager] Backup berhasil: $fileName');

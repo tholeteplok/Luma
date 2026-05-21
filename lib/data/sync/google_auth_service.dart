@@ -61,9 +61,11 @@ class GoogleAuthService {
     try {
       // Coba silent dulu
       var account = await _googleSignIn.signInSilently();
+      debugPrint('[GoogleAuthService] signInSilently: ${account?.email ?? "null"}');
 
       // Jika silent gagal atau scope belum granted, lakukan interactive sign-in
       account ??= await _googleSignIn.signIn();
+      debugPrint('[GoogleAuthService] signIn interactive: ${account?.email ?? "null"}');
 
       if (account == null) {
         debugPrint('[GoogleAuthService] Sign-in dibatalkan user');
@@ -72,6 +74,7 @@ class GoogleAuthService {
 
       // Pastikan scope drive.appdata sudah di-grant
       final hasScope = await _googleSignIn.requestScopes(_scopes);
+      debugPrint('[GoogleAuthService] requestScopes result: $hasScope');
       if (!hasScope) {
         debugPrint('[GoogleAuthService] Scope drive.appdata tidak di-grant user');
         return null;
@@ -80,8 +83,8 @@ class GoogleAuthService {
       _currentAccount = account;
 
       // Gunakan extension untuk mendapatkan AuthClient yang valid
-      // Ini adalah cara resmi — menghindari masalah accessToken null
       final client = await _googleSignIn.authenticatedClient();
+      debugPrint('[GoogleAuthService] authenticatedClient: ${client != null ? "OK" : "null"}');
       if (client == null) {
         debugPrint('[GoogleAuthService] authenticatedClient() return null');
         return null;
@@ -89,8 +92,8 @@ class GoogleAuthService {
 
       debugPrint('[GoogleAuthService] AuthClient berhasil untuk ${account.email}');
       return client;
-    } catch (e) {
-      debugPrint('[GoogleAuthService] signIn error: $e');
+    } catch (e, stack) {
+      debugPrint('[GoogleAuthService] signIn error: $e\n$stack');
       return null;
     }
   }

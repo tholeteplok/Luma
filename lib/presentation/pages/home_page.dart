@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -40,74 +41,85 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: p.bgBase,
       body: Consumer3<HomeNotifier, ThemeNotifier, SettingsNotifier>(
         builder: (context, homeState, themeState, settingsState, child) {
-          return CustomScrollView(
-            slivers: [
-              // ── Header ────────────────────────────────────────────
-              const SliverToBoxAdapter(child: LumaAppHeader()),
+          if (homeState.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.accent,
+                strokeWidth: 1.5,
+              ),
+            );
+          }
+          if (homeState.error != null) {
+            return _buildErrorState(context, homeState);
+          }
 
-              // ── Loading ───────────────────────────────────────────
-              if (homeState.isLoading)
-                const SliverFillRemaining(
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.accent,
-                      strokeWidth: 1.5,
+          final screenH = MediaQuery.sizeOf(context).height;
+          final orbAreaH = screenH * 0.50;
+          final orbSize = orbAreaH * 0.70;
+          final reduceMotion = settingsState.reduceMotion;
+
+          // Stack: orb fixed di belakang, scroll view di depan.
+          // Insight cards yang scroll melewati area orb akan melihat
+          // orb di belakangnya → BackdropFilter blur benar-benar terlihat.
+          return Stack(
+            children: [
+              // ── Layer 0: Orb — fixed, tidak ikut scroll ──────────────────
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: orbAreaH + MediaQuery.of(context).padding.top + 60,
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 60,
+                    ),
+                    child: AmbientOrb(
+                      state: homeState.orbState,
+                      profile: homeState.ambienceProfile,
+                      size: orbSize,
+                      reduceMotion: reduceMotion,
+                      nostalgiaActive: homeState.nostalgiaActive,
                     ),
                   ),
-                )
-              else if (homeState.error != null)
-                SliverFillRemaining(
-                  child: _buildErrorState(context, homeState),
-                )
-              else ...[
-                // ── Orb — 50% layar ───────────────────────────────
-                SliverToBoxAdapter(
-                  child: _buildOrbSection(context, homeState),
                 ),
+              ),
 
-                // ── Insight header ────────────────────────────────
-                SliverToBoxAdapter(
-                  child: _buildInsightHeader(context, homeState),
-                ),
+              // ── Layer 1: Scroll content ──────────────────────────────────
+              CustomScrollView(
+                slivers: [
+                  // Header
+                  const SliverToBoxAdapter(child: LumaAppHeader()),
 
-                // ── Insight list / silent / empty ─────────────────
-                ..._buildInsightSlivers(homeState, settingsState),
-
-                // ── Timeline ringkasan (di bawah insight) ─────────
-                SliverToBoxAdapter(
-                  child: _buildTimelineSection(
-                    context,
-                    homeState,
-                    settingsState.reduceMotion,
+                  // Spacer untuk area orb — konten di bawah ini akan
+                  // scroll melewati orb dan blur akan terlihat
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: orbAreaH),
                   ),
-                ),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 40)),
-              ],
+                  // Insight header
+                  SliverToBoxAdapter(
+                    child: _buildInsightHeader(context, homeState),
+                  ),
+
+                  // Insight list / silent / empty
+                  ..._buildInsightSlivers(homeState, settingsState),
+
+                  // Timeline ringkasan
+                  SliverToBoxAdapter(
+                    child: _buildTimelineSection(
+                      context,
+                      homeState,
+                      reduceMotion,
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                ],
+              ),
             ],
           );
         },
-      ),
-    );
-  }
-
-  // ── Orb: 50% tinggi layar ──────────────────────────────────────────────────
-  Widget _buildOrbSection(BuildContext context, HomeNotifier homeState) {
-    final screenH = MediaQuery.sizeOf(context).height;
-    final orbAreaH = screenH * 0.50;
-    final orbSize = orbAreaH * 0.70;
-    final reduceMotion = context.read<SettingsNotifier>().reduceMotion;
-
-    return SizedBox(
-      height: orbAreaH,
-      child: Center(
-        child: AmbientOrb(
-          state: homeState.orbState,
-          profile: homeState.ambienceProfile,
-          size: orbSize,
-          reduceMotion: reduceMotion,
-          nostalgiaActive: homeState.nostalgiaActive,
-        ),
       ),
     );
   }
@@ -245,16 +257,16 @@ class _HomePageState extends State<HomePage> {
             final insight = homeState.insights[index];
             // First insight (hari 1–3): widget khusus tanpa badge/feedback
             if (homeState.isFirstInsight) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              return _BlurCard(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
                 child: FirstInsightCard(
                   title: insight['title'] as String? ?? '',
                   subtitle: insight['message'] as String? ?? '',
                 ),
               );
             }
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            return _BlurCard(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
               child: InsightCard(
                 id: insight['id'] as String? ?? index.toString(),
                 title: insight['title'] as String? ?? '',
@@ -395,6 +407,34 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BLUR CARD — wrapper tipis seperti kabut
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Membungkus widget dengan BackdropFilter blur σ=2.5.
+/// Efek terlihat saat card scroll melewati AmbientOrb di belakangnya.
+/// Tidak ada efek glassmorphism — hanya kabut sangat tipis.
+class _BlurCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry margin;
+
+  const _BlurCard({required this.child, this.margin = EdgeInsets.zero});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: margin,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+          child: child,
+        ),
       ),
     );
   }

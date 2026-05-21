@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -34,6 +35,9 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       backgroundColor: p.bgBase,
+      // extendBody: true agar konten bisa terlihat di belakang NavBar
+      // sehingga BackdropFilter blur benar-benar melihat konten di belakangnya
+      extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _tabs),
       bottomNavigationBar: _LumaNavBar(
         currentIndex: _currentIndex,
@@ -66,52 +70,62 @@ class _LumaNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.luma;
-    return Container(
-      decoration: BoxDecoration(
-        color: p.bgBase,
-        border: Border(top: BorderSide(color: p.borderFaint, width: 0.5)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: List.generate(labels.length, (i) {
-              final selected = i == currentIndex;
-              final (outlined, filled) = _icons[i];
-              return Expanded(
-                child: InkWell(
-                  onTap: () => onTap(i),
-                  splashFactory: NoSplash.splashFactory,
-                  highlightColor: Colors.transparent,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: Icon(
-                          selected ? filled : outlined,
-                          key: ValueKey(selected),
-                          size: 22,
-                          color: selected ? p.textPrimary : p.textSubtle,
-                        ),
+    // BackdropFilter blur tipis — terlihat karena extendBody: true
+    // konten di belakang NavBar terlihat dan di-blur σ=2.5
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+        child: Container(
+          decoration: BoxDecoration(
+            // Overlay sangat ringan — hanya nuansa, bukan solid
+            color: p.bgBase.withValues(alpha: 0.85),
+            border: Border(
+              top: BorderSide(color: p.borderFaint, width: 0.5),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                children: List.generate(labels.length, (i) {
+                  final selected = i == currentIndex;
+                  final (outlined, filled) = _icons[i];
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () => onTap(i),
+                      splashFactory: NoSplash.splashFactory,
+                      highlightColor: Colors.transparent,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              selected ? filled : outlined,
+                              key: ValueKey(selected),
+                              size: 22,
+                              color: selected ? p.textPrimary : p.textSubtle,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            labels[i],
+                            style: GoogleFonts.dmSans(
+                              fontSize: 11,
+                              fontWeight: selected
+                                  ? FontWeight.w500
+                                  : FontWeight.w400,
+                              color: selected ? p.textPrimary : p.textSubtle,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        labels[i],
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: selected
-                              ? FontWeight.w500
-                              : FontWeight.w400,
-                          color: selected ? p.textPrimary : p.textSubtle,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+                    ),
+                  );
+                }),
+              ),
+            ),
           ),
         ),
       ),

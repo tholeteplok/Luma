@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -64,17 +65,34 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeNotifier>();
 
+    // Tentukan brightness berdasarkan tema aktif untuk menyelaraskan icon navigasi sistem
+    final isDark = theme.themeMode == ThemeMode.dark ||
+        (theme.themeMode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+
+    final systemUiStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+    );
+
     // Loading state — layar kosong < 50ms
     if (_hasCompletedPermissionGate == null ||
         _hasCompletedOnboarding == null) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: theme.themeMode,
-        home: const Scaffold(
-          backgroundColor: Color(0xFF081B1B),
-          body: SizedBox.shrink(),
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: systemUiStyle,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: theme.themeMode,
+          home: const Scaffold(
+            backgroundColor: Color(0xFF081B1B),
+            body: SizedBox.shrink(),
+          ),
         ),
       );
     }
@@ -91,13 +109,16 @@ class _MainAppState extends State<MainApp> {
       home = const MainShell();
     }
 
-    return MaterialApp(
-      title: 'Luma',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: theme.themeMode,
-      home: home,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiStyle,
+      child: MaterialApp(
+        title: 'Luma',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: theme.themeMode,
+        home: home,
+      ),
     );
   }
 }

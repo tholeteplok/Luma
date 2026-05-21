@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:luma/domain/entities/ambience_profile.dart';
 import 'package:luma/domain/services/orb_state_engine.dart';
@@ -25,80 +26,98 @@ class _OrbPalette {
   final Color core;
   final Color mid;
   final Color outer;
+  final Color fresnel;
   final double waveIntensity;
   final int wavePoints;
   final Duration breathDuration;
+  final double blurSigma;
 
   const _OrbPalette({
     required this.core,
     required this.mid,
     required this.outer,
+    required this.fresnel,
     required this.waveIntensity,
     required this.wavePoints,
     required this.breathDuration,
+    required this.blurSigma,
   });
 }
 
 const _palettes = {
   OrbState.dawn: _OrbPalette(
-    core:  Color(0xFF1A5A4A),
-    mid:   Color(0xFF0F3A2E),
-    outer: Color(0xFF081B1B),
-    waveIntensity: 0.045,
+    core:  Color(0xFF3D526B), // Muted ocean slate
+    mid:   Color(0xFF253346), // Soft deep indigo-slate
+    outer: Color(0xFF121B26), // Almost black blue
+    fresnel: Color(0xFF48586E), // Very soft slate blue glow
+    waveIntensity: 0.025,
     wavePoints: 7,
-    breathDuration: Duration(milliseconds: 6500),
+    breathDuration: Duration(milliseconds: 14000), // extremely slow breath
+    blurSigma: 18.0,
   ),
   OrbState.calm: _OrbPalette(
-    core:  Color(0xFF5A8F76), // #5A8F76
-    mid:   Color(0xFF203B37), // #203B37
-    outer: Color(0xFF0F2626),
-    waveIntensity: 0.030,
+    core:  Color(0xFF4E6D5F), // Muted soft sage
+    mid:   Color(0xFF2C3E36), // Deep quiet forest-slate
+    outer: Color(0xFF151F1B), // Very dark leaf green
+    fresnel: Color(0xFF5D7D6F), // Muted light-green dew glow
+    waveIntensity: 0.020,
     wavePoints: 8,
-    breathDuration: Duration(milliseconds: 5500),
+    breathDuration: Duration(milliseconds: 12000),
+    blurSigma: 20.0,
   ),
   OrbState.wave: _OrbPalette(
-    core:  Color(0xFF6B5A8A), // ungu-teal — gelisah
-    mid:   Color(0xFF3A2A5A),
-    outer: Color(0xFF1A0F2E),
-    waveIntensity: 0.075,
+    core:  Color(0xFF6E5676), // Muted quiet lavender-purple
+    mid:   Color(0xFF3F3045), // Deep gray-purple
+    outer: Color(0xFF1F1523), // Very dark night-purple
+    fresnel: Color(0xFF7D6787), // Very soft lilac glow
+    waveIntensity: 0.040,
     wavePoints: 11,
-    breathDuration: Duration(milliseconds: 3800),
+    breathDuration: Duration(milliseconds: 9000),
+    blurSigma: 22.0,
   ),
   OrbState.mist: _OrbPalette(
-    core:  Color(0xFF1E2E2A),
-    mid:   Color(0xFF141E1C),
-    outer: Color(0xFF0A1412),
-    waveIntensity: 0.018,
+    core:  Color(0xFF263230), // Muted quiet mist green
+    mid:   Color(0xFF18201E),
+    outer: Color(0xFF0E1312),
+    fresnel: Color(0xFF2E3D3A),
+    waveIntensity: 0.010,
     wavePoints: 6,
-    breathDuration: Duration(milliseconds: 9000),
+    breathDuration: Duration(milliseconds: 18000),
+    blurSigma: 24.0,
   ),
 };
 
 /// Palette untuk varian baru (OrbVariant yang tidak ada di OrbState)
 const _variantPalettes = <OrbVariant, _OrbPalette>{
   OrbVariant.dusk: _OrbPalette(
-    core:  Color(0xFF5A3010), // oranye redup — malam yang panjang
-    mid:   Color(0xFF3A1E08),
-    outer: Color(0xFF1A0A04),
-    waveIntensity: 0.025,
+    core:  Color(0xFF6B4D3A), // Muted quiet copper
+    mid:   Color(0xFF3D2A1F),
+    outer: Color(0xFF1E130D),
+    fresnel: Color(0xFF7D5F4A),
+    waveIntensity: 0.015,
     wavePoints: 7,
-    breathDuration: Duration(milliseconds: 8000),
+    breathDuration: Duration(milliseconds: 16000),
+    blurSigma: 22.0,
   ),
   OrbVariant.recover: _OrbPalette(
-    core:  Color(0xFF2A5A3A), // hijau sage muda — mengembang pelan
-    mid:   Color(0xFF1A3A26),
-    outer: Color(0xFF0C2018),
-    waveIntensity: 0.022,
+    core:  Color(0xFF466956), // Muted sage-mint
+    mid:   Color(0xFF283D32),
+    outer: Color(0xFF121E18),
+    fresnel: Color(0xFF5B7E6B),
+    waveIntensity: 0.018,
     wavePoints: 8,
-    breathDuration: Duration(milliseconds: 7500),
+    breathDuration: Duration(milliseconds: 13000),
+    blurSigma: 20.0,
   ),
   OrbVariant.stellar: _OrbPalette(
-    core:  Color(0xFFEEE8B2), // #EEE8B2 — krem keemasan
-    mid:   Color(0xFFC18D52), // #C18D52 — gold
-    outer: Color(0xFF3A2A10),
-    waveIntensity: 0.012, // hampir tidak bergerak
+    core:  Color(0xFF807A65), // Muted quiet gold
+    mid:   Color(0xFF4F4B3C),
+    outer: Color(0xFF26241D),
+    fresnel: Color(0xFF96907C),
+    waveIntensity: 0.008,
     wavePoints: 6,
-    breathDuration: Duration(milliseconds: 11000), // denyut sangat pelan
+    breathDuration: Duration(milliseconds: 20000),
+    blurSigma: 26.0,
   ),
 };
 
@@ -155,8 +174,9 @@ class AmbientOrb extends StatefulWidget {
 }
 
 class _AmbientOrbState extends State<AmbientOrb>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin {
+  late AnimationController _breathController;
+  late AnimationController _waveController;
 
   /// Palette aktif — dihitung dari profile atau state
   _OrbPalette get _activePalette {
@@ -185,7 +205,7 @@ class _AmbientOrbState extends State<AmbientOrb>
       case BiologicalTimePhase.personalEvening:
       case BiologicalTimePhase.personalMidday:
         break; // default
-    }
+      }
 
     // WeeklyRhythmState modifikasi
     switch (profile.rhythmState) {
@@ -209,9 +229,11 @@ class _AmbientOrbState extends State<AmbientOrb>
       core: base.core,
       mid: base.mid,
       outer: base.outer,
+      fresnel: base.fresnel,
       waveIntensity: waveIntensity,
       wavePoints: wavePoints,
       breathDuration: Duration(milliseconds: breathMs.round()),
+      blurSigma: base.blurSigma,
     );
   }
 
@@ -222,11 +244,19 @@ class _AmbientOrbState extends State<AmbientOrb>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _breathController = AnimationController(
       vsync: this,
       duration: _activePalette.breathDuration,
     );
-    if (!widget.reduceMotion) _controller.repeat();
+    _waveController = AnimationController(
+      vsync: this,
+      duration: _getWaveDuration(_activePalette),
+    );
+
+    if (!widget.reduceMotion) {
+      _breathController.repeat(reverse: true);
+      _waveController.repeat();
+    }
   }
 
   @override
@@ -239,18 +269,30 @@ class _AmbientOrbState extends State<AmbientOrb>
     final nostalgiaChanged = widget.nostalgiaActive != oldWidget.nostalgiaActive;
 
     if (variantChanged || stateChanged || nostalgiaChanged) {
-      _controller.duration = _activePalette.breathDuration;
-      if (!widget.reduceMotion) _controller.repeat();
+      _breathController.duration = _activePalette.breathDuration;
+      _waveController.duration = _getWaveDuration(_activePalette);
+
+      if (!widget.reduceMotion) {
+        if (!_breathController.isAnimating) _breathController.repeat(reverse: true);
+        if (!_waveController.isAnimating) _waveController.repeat();
+      }
     }
 
     if (widget.reduceMotion != oldWidget.reduceMotion) {
-      widget.reduceMotion ? _controller.stop() : _controller.repeat();
+      if (widget.reduceMotion) {
+        _breathController.stop();
+        _waveController.stop();
+      } else {
+        _breathController.repeat(reverse: true);
+        _waveController.repeat();
+      }
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _breathController.dispose();
+    _waveController.dispose();
     super.dispose();
   }
 
@@ -260,7 +302,7 @@ class _AmbientOrbState extends State<AmbientOrb>
     final canvasSize = widget.size * 1.9;
 
     return AnimatedSwitcher(
-      // 3000ms untuk transisi antar variant (lebih lambat = lebih halus)
+      // 3000ms untuk transisi antar variant (lambat & halus)
       duration: const Duration(milliseconds: 3000),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
@@ -268,35 +310,78 @@ class _AmbientOrbState extends State<AmbientOrb>
           FadeTransition(opacity: anim, child: child),
       child: RepaintBoundary(
         key: ValueKey(_switcherKey),
-        child: SizedBox(
-          width: canvasSize,
-          height: canvasSize,
-          child: widget.reduceMotion
-              ? CustomPaint(
-                  painter: _OrbPainter(
-                    progress: 0.0,
-                    palette: palette,
-                    orbSize: widget.size,
-                    nostalgiaActive: widget.nostalgiaActive,
-                    // personalEvening: geser pusat ke bawah
-                    centerOffsetY: _centerOffsetY,
-                  ),
-                )
-              : AnimatedBuilder(
-                  animation: _controller,
-                  builder: (_, child) => CustomPaint(
-                    painter: _OrbPainter(
-                      progress: _controller.value,
-                      palette: palette,
-                      orbSize: widget.size,
-                      nostalgiaActive: widget.nostalgiaActive,
-                      centerOffsetY: _centerOffsetY,
-                    ),
+        child: ScaleTransition(
+          scale: widget.reduceMotion
+              ? const AlwaysStoppedAnimation(1.0)
+              : Tween<double>(begin: 0.95, end: 1.05).animate(
+                  CurvedAnimation(
+                    parent: _breathController,
+                    curve: Curves.easeInOut,
                   ),
                 ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // ── 1. Liquid core dinamis (Blurred) ─────────────────────────────
+              ImageFiltered(
+                imageFilter: ui.ImageFilter.blur(
+                  sigmaX: palette.blurSigma,
+                  sigmaY: palette.blurSigma,
+                ),
+                child: SizedBox(
+                  width: canvasSize,
+                  height: canvasSize,
+                  child: widget.reduceMotion
+                      ? CustomPaint(
+                          painter: _LiquidPainter(
+                            progress: 0.0,
+                            palette: palette,
+                            orbSize: widget.size,
+                            centerOffsetY: _centerOffsetY,
+                          ),
+                        )
+                      : AnimatedBuilder(
+                          animation: _waveController,
+                          builder: (_, child) => CustomPaint(
+                            painter: _LiquidPainter(
+                              progress: _waveController.value,
+                              palette: palette,
+                              orbSize: widget.size,
+                              centerOffsetY: _centerOffsetY,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+
+              // ── 2. Glass Specular & Outline (Sharp) ──────────────────────────
+              SizedBox(
+                width: canvasSize,
+                height: canvasSize,
+                child: CustomPaint(
+                  painter: _GlassOverlayPainter(
+                    orbSize: widget.size,
+                    fresnelColor: palette.fresnel,
+                    nostalgiaActive: widget.nostalgiaActive,
+                    centerOffsetY: _centerOffsetY,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Dapatkan durasi putaran gelombang linear yang teramat lambat
+  Duration _getWaveDuration(_OrbPalette palette) {
+    if (palette.waveIntensity > 0.03) {
+      return const Duration(milliseconds: 22000); // wave (slow wave)
+    } else if (palette.waveIntensity < 0.015) {
+      return const Duration(milliseconds: 50000); // mist/stellar (extremely slow)
+    }
+    return const Duration(milliseconds: 32000); // default
   }
 
   /// Offset vertikal pusat orb untuk personalEvening (8% dari orbSize)
@@ -309,39 +394,32 @@ class _AmbientOrbState extends State<AmbientOrb>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  ORB PAINTER — bezier organik multi-layer
+//  LIQUID PAINTER — Shifting fluid blobs (blurred)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _OrbPainter extends CustomPainter {
+class _LiquidPainter extends CustomPainter {
   final double progress;
   final _OrbPalette palette;
   final double orbSize;
-  final bool nostalgiaActive;
   final double centerOffsetY;
 
-  const _OrbPainter({
+  const _LiquidPainter({
     required this.progress,
     required this.palette,
     required this.orbSize,
-    this.nostalgiaActive = false,
     this.centerOffsetY = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Terapkan centerOffsetY untuk personalEvening (pusat bergeser ke bawah)
     final center = Offset(size.width / 2, size.height / 2 + centerOffsetY);
     final maxRadius = orbSize / 2;
     final t = progress * math.pi * 2;
 
-    // ── Layer 0: Aura luar + NostalgiaEffect ─────────────────────────────────
+    // ── Layer 0: Aura pendaran latar belakang ────────────────────────────────
     _paintAura(canvas, center, maxRadius);
-    if (nostalgiaActive) {
-      _paintNostalgiaGlow(canvas, center, maxRadius);
-    }
 
-    // ── Layer 1–3: Blob organik dengan fase berbeda ───────────────────────────
-    // Layer terluar → terdalam, opacity naik, ukuran turun
+    // ── Layer 1–3: Blob organik lambat dengan fase berbeda ───────────────────
     final layerConfigs = [
       _LayerConfig(
         radiusRatio: 0.88,
@@ -354,7 +432,7 @@ class _OrbPainter extends CustomPainter {
         radiusRatio: 0.70,
         color: palette.mid,
         opacity: 0.70,
-        phaseOffset: math.pi * 0.7,  // fase berbeda — tidak sinkron
+        phaseOffset: math.pi * 0.7,
         speedMultiplier: 1.15,
       ),
       _LayerConfig(
@@ -370,7 +448,7 @@ class _OrbPainter extends CustomPainter {
       _paintBlob(canvas, center, maxRadius, t, cfg);
     }
 
-    // ── Layer 4: Highlight kecil di tengah — titik cahaya ────────────────────
+    // ── Layer 4: Titik cahaya pusat halus ───────────────────────────────────
     _paintCoreHighlight(canvas, center, maxRadius);
   }
 
@@ -378,9 +456,10 @@ class _OrbPainter extends CustomPainter {
     final paint = Paint()
       ..shader = RadialGradient(
         colors: [
-          palette.mid.withValues(alpha: 0.18),
-          palette.outer.withValues(alpha: 0.06),
-          Colors.transparent,        ],
+          palette.mid.withValues(alpha: 0.15),
+          palette.outer.withValues(alpha: 0.05),
+          Colors.transparent,
+        ],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(
         Rect.fromCircle(center: center, radius: maxRadius * 1.8),
@@ -401,8 +480,7 @@ class _OrbPainter extends CustomPainter {
 
     for (int i = 0; i < n; i++) {
       final angle = i * angleStep;
-      // Harmoni sinus ganda — menghasilkan modulasi tidak periodik sempurna
-      // sehingga terasa acak seperti cairan, bukan mekanis
+      // Amplitudo ganda non-periodik yang dirotasi lambat
       final wave = math.sin(t * cfg.speedMultiplier + cfg.phaseOffset + i * 1.3) *
           math.cos(t * cfg.speedMultiplier * 0.6 + i * 0.9 + cfg.phaseOffset * 0.5);
 
@@ -413,7 +491,6 @@ class _OrbPainter extends CustomPainter {
       ));
     }
 
-    // Hubungkan titik dengan quadratic bezier — kurva halus, bukan garis lurus
     final path = Path();
     path.moveTo(
       (points.last.dx + points.first.dx) / 2,
@@ -428,17 +505,17 @@ class _OrbPainter extends CustomPainter {
     }
     path.close();
 
-    // Gradient radial dari inti ke tepi — memberikan kedalaman volumetrik
     final paint = Paint()
       ..style = PaintingStyle.fill
       ..isAntiAlias = true
       ..shader = RadialGradient(
         colors: [
           cfg.color.withValues(alpha: cfg.opacity),
-          cfg.color.withValues(alpha: cfg.opacity * 0.5),
+          cfg.color.withValues(alpha: cfg.opacity * 0.6),
+          cfg.color.withValues(alpha: cfg.opacity * 0.15),
           cfg.color.withValues(alpha: 0.0),
         ],
-        stops: const [0.0, 0.65, 1.0],
+        stops: const [0.0, 0.4, 0.8, 1.0],
       ).createShader(
         Rect.fromCircle(center: center, radius: maxRadius * cfg.radiusRatio),
       );
@@ -447,12 +524,10 @@ class _OrbPainter extends CustomPainter {
   }
 
   void _paintCoreHighlight(Canvas canvas, Offset center, double maxRadius) {
-    // Titik cahaya kecil di tengah — seperti bioluminescence yang paling terang
-    // Tidak bergerak, memberikan "pusat gravitasi" visual
     final paint = Paint()
       ..shader = RadialGradient(
         colors: [
-          palette.core.withValues(alpha: 0.45),
+          palette.core.withValues(alpha: 0.35),
           palette.core.withValues(alpha: 0.0),
         ],
       ).createShader(
@@ -461,31 +536,141 @@ class _OrbPainter extends CustomPainter {
     canvas.drawCircle(center, maxRadius * 0.18, paint);
   }
 
-  /// NostalgiaEffect — aura gold tipis di sekitar orb
-  /// Muncul saat user membuka insight >30 hari lalu
-  void _paintNostalgiaGlow(Canvas canvas, Offset center, double maxRadius) {
-    const goldColor = Color(0xFFC18D52); // #C18D52
-    final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          Colors.transparent,
-          goldColor.withValues(alpha: 0.08),
-          goldColor.withValues(alpha: 0.15),
-          goldColor.withValues(alpha: 0.04),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.55, 0.70, 0.85, 1.0],
-      ).createShader(
-        Rect.fromCircle(center: center, radius: maxRadius * 1.6),
-      );
-    canvas.drawCircle(center, maxRadius * 1.6, paint);
-  }
-
   @override
-  bool shouldRepaint(covariant _OrbPainter old) =>
+  bool shouldRepaint(covariant _LiquidPainter old) =>
       old.progress != progress ||
       old.palette != palette ||
       old.orbSize != orbSize ||
+      old.centerOffsetY != centerOffsetY;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  GLASS OVERLAY PAINTER — Specular, Rim, & Fresnel bounce (sharp & crisp)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GlassOverlayPainter extends CustomPainter {
+  final double orbSize;
+  final Color fresnelColor;
+  final bool nostalgiaActive;
+  final double centerOffsetY;
+
+  const _GlassOverlayPainter({
+    required this.orbSize,
+    required this.fresnelColor,
+    required this.nostalgiaActive,
+    required this.centerOffsetY,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2 + centerOffsetY);
+    final maxRadius = orbSize / 2;
+
+    // ── 1. Fresnel Bottom-Right Bounce Light (Diperluas & Diperkaya) ─────────
+    final fresnelPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          fresnelColor.withValues(alpha: 0.12), // Sedikit lebih kaya untuk efek kedalaman
+          fresnelColor.withValues(alpha: 0.03),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.6, 1.0],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(center.dx + maxRadius * 0.45, center.dy + maxRadius * 0.45),
+          radius: maxRadius * 0.85, // Area pendaran lebih luas
+        ),
+      );
+    canvas.drawCircle(
+      Offset(center.dx + maxRadius * 0.45, center.dy + maxRadius * 0.45),
+      maxRadius * 0.85,
+      fresnelPaint,
+    );
+
+    // ── 2. Specular Glare (Crescent Organik, Tapered & Soft Edge Blur) ───────
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(-math.pi / 4); // Putar 45 derajat ke atas-kiri
+
+    // Membuat path berbentuk sabit (crescent) yang meruncing di kedua ujungnya
+    final outerRect = Rect.fromCircle(center: Offset.zero, radius: maxRadius * 0.93);
+    final innerRect = Rect.fromCircle(
+      center: Offset(0, maxRadius * 0.04), // Geser sedikit ke bawah untuk membuat taper (lancip di ujung)
+      radius: maxRadius * 0.88,
+    );
+
+    final specularPath = Path()
+      ..arcTo(outerRect, -math.pi * 0.85, math.pi * 0.70, true)
+      ..arcTo(innerRect, -math.pi * 0.15, -math.pi * 0.70, false)
+      ..close();
+
+    final specularPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(-maxRadius * 0.6, -maxRadius * 0.9),
+        Offset(maxRadius * 0.6, -maxRadius * 0.6),
+        [
+          Colors.white.withValues(alpha: 0.28), // Lebih terang di pusat refleksi
+          Colors.white.withValues(alpha: 0.05), // Memudar anggun di tepian
+        ],
+      )
+      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 1.2); // Membuat tepian sangat lembut/blur alami
+
+    canvas.drawPath(specularPath, specularPaint);
+    canvas.restore();
+
+    // ── 3. Dual-Tone Glass Rim (Outline Pembiasan) ───────────────────────────
+    // A. Rim Terang (Top-Left dominant) - Dibuat Lebih Tebal & Nyata
+    final rimPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2 // Dipertebal dari 0.65
+      ..shader = ui.Gradient.linear(
+        Offset(center.dx - maxRadius, center.dy - maxRadius),
+        Offset(center.dx + maxRadius, center.dy + maxRadius),
+        [
+          Colors.white.withValues(alpha: 0.28), // Opacity ditingkatkan agar terlihat anggun di light mode
+          Colors.white.withValues(alpha: 0.04),
+        ],
+        const [0.0, 1.0],
+      );
+    canvas.drawCircle(center, maxRadius, rimPaint);
+
+    // B. Rim Gelap Refraktif (Bottom-Right dominant) - Memberikan kontras luar biasa di light mode
+    final darkRimPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..shader = ui.Gradient.linear(
+        Offset(center.dx - maxRadius, center.dy - maxRadius),
+        Offset(center.dx + maxRadius, center.dy + maxRadius),
+        [
+          Colors.black.withValues(alpha: 0.0),
+          Colors.black.withValues(alpha: 0.08), // Sangat tipis, menyatu dengan shadow
+        ],
+        const [0.0, 1.0],
+      );
+    canvas.drawCircle(center, maxRadius, darkRimPaint);
+
+    // ── 4. Nostalgia Gold Rim Aura ───────────────────────────────────────────
+    if (nostalgiaActive) {
+      const goldColor = Color(0xFFC18D52);
+      final goldPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.80 // Dipertebal proporsional
+        ..shader = ui.Gradient.linear(
+          Offset(center.dx - maxRadius, center.dy - maxRadius),
+          Offset(center.dx + maxRadius, center.dy + maxRadius),
+          [
+            goldColor.withValues(alpha: 0.12),
+            goldColor.withValues(alpha: 0.02),
+          ],
+        );
+      canvas.drawCircle(center, maxRadius + 3.0, goldPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlassOverlayPainter old) =>
+      old.orbSize != orbSize ||
+      old.fresnelColor != fresnelColor ||
       old.nostalgiaActive != nostalgiaActive ||
       old.centerOffsetY != centerOffsetY;
 }

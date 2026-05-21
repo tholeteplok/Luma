@@ -225,11 +225,15 @@ class SettingsNotifier extends ChangeNotifier {
       } else {
         // null bisa berarti: platform tidak didukung, belum dikonfigurasi,
         // sign-in dibatalkan, atau error teknis
+        final authError = GoogleAuthService().lastErrorDescription;
+        final customError = authError != null
+            ? (languageCode == 'id' ? 'Backup gagal: $authError' : 'Backup failed: $authError')
+            : (languageCode == 'id'
+                ? 'Backup gagal. Pastikan kamu sudah masuk ke akun Google dan koneksi internet aktif.'
+                : 'Backup failed. Make sure you are signed in to Google and have an active internet connection.');
         _state = _state.copyWith(
           isBackingUp: false,
-          error: languageCode == 'id'
-              ? 'Backup gagal. Pastikan kamu sudah masuk ke akun Google dan koneksi internet aktif.'
-              : 'Backup failed. Make sure you are signed in to Google and have an active internet connection.',
+          error: customError,
         );
         notifyListeners();
         return false;

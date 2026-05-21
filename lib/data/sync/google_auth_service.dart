@@ -45,16 +45,22 @@ class GoogleAuthService {
   GoogleSignInAccount? get currentAccount => _currentAccount;
   bool get isSignedIn => _currentAccount != null;
 
+  String? _lastErrorDescription;
+  String? get lastErrorDescription => _lastErrorDescription;
+
   // ─── Sign-In ────────────────────────────────────────────────────────────────
 
   /// Sign-in dan return AuthClient yang siap dipakai googleapis.
   Future<auth.AuthClient?> signIn() async {
+    _lastErrorDescription = null;
     if (!isPlatformSupported) {
       debugPrint('[GoogleAuthService] Platform tidak didukung: $defaultTargetPlatform');
+      _lastErrorDescription = 'Platform tidak didukung: $defaultTargetPlatform';
       return null;
     }
     if (!isConfigured) {
       debugPrint('[GoogleAuthService] Web Client ID belum dikonfigurasi.');
+      _lastErrorDescription = 'Google Auth belum dikonfigurasi di aplikasi.';
       return null;
     }
 
@@ -69,6 +75,7 @@ class GoogleAuthService {
 
       if (account == null) {
         debugPrint('[GoogleAuthService] Sign-in dibatalkan user');
+        _lastErrorDescription = 'Sign-in dibatalkan oleh pengguna.';
         return null;
       }
 
@@ -83,6 +90,7 @@ class GoogleAuthService {
         debugPrint('[GoogleAuthService] requestScopes result: $requested');
         if (!requested) {
           debugPrint('[GoogleAuthService] Scope drive.appdata tidak di-grant user');
+          _lastErrorDescription = 'Akses Google Drive AppData ditolak oleh pengguna.';
           return null;
         }
       }
@@ -92,6 +100,7 @@ class GoogleAuthService {
       debugPrint('[GoogleAuthService] authenticatedClient: ${client != null ? "OK" : "null"}');
       if (client == null) {
         debugPrint('[GoogleAuthService] authenticatedClient() return null');
+        _lastErrorDescription = 'Gagal membuat authenticated client.';
         return null;
       }
 
@@ -99,12 +108,14 @@ class GoogleAuthService {
       return client;
     } catch (e, stack) {
       debugPrint('[GoogleAuthService] signIn error: $e\n$stack');
+      _lastErrorDescription = _parseException(e);
       return null;
     }
   }
 
   /// Silent sign-in — tidak menampilkan UI.
   Future<auth.AuthClient?> signInSilently() async {
+    _lastErrorDescription = null;
     if (!isPlatformSupported || !isConfigured) return null;
 
     try {
@@ -116,8 +127,27 @@ class GoogleAuthService {
       return client;
     } catch (e) {
       debugPrint('[GoogleAuthService] signInSilently error: $e');
+      _lastErrorDescription = _parseException(e);
       return null;
     }
+  }
+
+  /// Helper untuk mengurai exception ke pesan yang informatif
+  String _parseException(Object e) {
+    final str = e.toString();
+    if (str.contains('10') || str.contains('DEVELOPER_ERROR')) {
+      return 'DEVELOPER_ERROR (10): Kesalahan konfigurasi tanda tangan SHA-1 Keystore lokal. Pastikan SHA-1 Anda terdaftar di Firebase Console.';
+    }
+    if (str.contains('7') || str.contains('NETWORK_ERROR') || str.contains('network_error')) {
+      return 'NETWORK_ERROR (7): Koneksi internet terputus atau tidak aktif.';
+    }
+    if (str.contains('12501') || str.contains('SIGN_IN_CANCELLED') || str.contains('cancelled')) {
+      return 'Sign-in dibatalkan oleh pengguna.';
+    }
+    if (str.contains('12500')) {
+      return 'SIGN_IN_FAILED (12500): Autentikasi Google gagal. Periksa Google Play Services Anda.';
+    }
+    return 'Gagal masuk ke Google: $e';
   }
 
   /// Dapatkan AuthClient yang valid — refresh otomatis via extension.

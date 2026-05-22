@@ -14,6 +14,9 @@ class AboutPage extends StatelessWidget {
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: try launching directly to bypass strict OS queries check
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {
       if (context.mounted) {

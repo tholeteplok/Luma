@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luma — Cermin Digital</title>
+    <!-- Modern Typography: Outfit for Headings, Inter for Body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Outfit:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+    <!-- Link to external CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg" id="particles"></div>
+    <div class="glow-orb background-orb-1"></div>
+    <div class="glow-orb background-orb-2"></div>
+
+    <!-- Hero Section -->
+    <section class="hero hidden-on-load">
+        <div class="orb-container">
+            <div class="hero-orb"></div>
+        </div>
+
+        <h1 class="hero-title">Luma</h1>
+        <p class="tagline">"Cermin yang tidak menuntut untuk dilihat."</p>
+        <p class="description">
+            Luma mengamati ritme digital harianmu — bukan untuk menilai,
+            bukan untuk memperbaiki, hanya untuk hadir.
+            Data tidak pernah meninggalkan perangkatmu.
+            Tidak ada target. Tidak ada score.
+            Hanya keheningan yang sesekali berbicara.
+        </p>
+
+        <div class="cta">
+            <a href="#mockup" class="btn-primary">
+                <span class="btn-text">Coba Luma</span>
+                <span class="btn-hover-effect"></span>
+            </a>
+        </div>
+
+        <div class="scroll-hint">
+            <span class="mouse-icon"></span>
+            <span class="scroll-line"></span>
+        </div>
+    </section>
+
+    <!-- Interactive Mockup Section -->
+    <section class="mockup-section reveal" id="mockup">
+        <div class="section-header">
+            <h2>Rasakan Luma</h2>
+            <p class="subtitle">Sentuh layar di bawah ini. Navigasi antar tab. Rasakan keheningannya.</p>
+        </div>
+
+        <div class="phone-frame glass-panel">
+            <div class="phone-notch"></div>
+            <div class="phone-glare"></div>
+            
+            <div class="phone-screen">
+                <!-- Status Bar -->
+                <div class="status-bar">
+                    <span class="time" id="clock">16:55</span>
+                    <div class="icons">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                        <svg width="16" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="23" y1="13" x2="23" y2="11"></line></svg>
+                    </div>
+                </div>
+
+                <!-- App Content Container -->
+                <div class="app-content-wrapper">
+                    
+                    <!-- Tab: Home -->
+                    <div class="app-content tab-content active" id="tab-home">
+                        <div class="app-header">
+                            <h3>Luma</h3>
+                            <div class="date" id="current-date">Kamis, 21 Mei</div>
+                        </div>
+
+                        <div class="app-orb-container">
+                            <div class="app-orb"></div>
+                        </div>
+
+                        <div class="insight-header">
+                            <h4>Insight</h4>
+                            <button class="see-all">Lihat Semua</button>
+                        </div>
+
+                        <div class="insight-card interactable">
+                            <div class="card-glow"></div>
+                            <div class="title">Luma baru mulai mengenal ritmemu.</div>
+                            <div class="subtitle">Dalam beberapa hari ke depan, cerminan pertama akan muncul.</div>
+                            <div class="meta">Ini baru permulaan. Luma akan semakin mengenalmu.</div>
+                        </div>
+
+                        <div class="timeline-card glass-card">
+                            <div class="label">Minggu Ini</div>
+                            <div class="timeline-track">
+                                <div class="timeline-line"></div>
+                                <div class="timeline-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Rhythm -->
+                    <div class="app-content tab-content" id="tab-rhythm">
+                        <div class="app-header">
+                            <h3>Ritme</h3>
+                            <div class="date" id="current-date-2">Kamis, 21 Mei</div>
+                        </div>
+
+                        <div class="timeline-card glass-card">
+                            <div class="label">Minggu Ini</div>
+                            <div class="timeline-track">
+                                <div class="timeline-line"></div>
+                                <div class="timeline-dot" style="left: 15%"></div>
+                            </div>
+                        </div>
+
+                        <div class="rhythm-card interactable">
+                            <div class="card-glow"></div>
+                            <div class="label">Perhatian Luma</div>
+                            <div class="content">Minggu ini, Luma memperhatikan pola istirahat dan malammu.</div>
+                            <div class="meta">Masih hari-hari pertama — observasi ringan.</div>
+                        </div>
+
+                        <div class="insight-header mt-4">
+                            <h4>Catatan Sebelumnya</h4>
+                            <button class="see-all">11</button>
+                        </div>
+
+                        <div class="insight-card glass-card interactable">
+                            <div class="title">Luma baru mulai mengenal ritmemu.</div>
+                            <div class="subtitle">Dalam beberapa hari ke depan, cerminan pertama akan muncul.</div>
+                            <div class="meta">Luma akan terus mengamati. Pola biasanya muncul setelah beberapa hari.</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Settings -->
+                    <div class="app-content tab-content" id="tab-settings">
+                        <div class="app-header center">
+                            <h3>Pengaturan</h3>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="group-title">Tampilan</div>
+                            <div class="settings-item glass-card interactable">
+                                <div class="info">
+                                    <h4>Mode Tema</h4>
+                                    <p>Gelap</p>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="group-title">Aksesibilitas</div>
+                            <div class="settings-item glass-card interactable" onclick="toggleSwitch(this)">
+                                <div class="info">
+                                    <h4>Kurangi Animasi</h4>
+                                    <p>Matikan animasi bernafas pada timeline</p>
+                                </div>
+                                <div class="toggle-switch">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="group-title">Notifikasi</div>
+                            <div class="settings-item glass-card interactable" onclick="toggleSwitch(this)">
+                                <div class="info">
+                                    <h4>Notifikasi Insight</h4>
+                                    <p>Luma memberi tahu saat ada pola baru</p>
+                                </div>
+                                <div class="toggle-switch active">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="group-title">Privasi & Data</div>
+                            <div class="settings-item glass-card interactable" onclick="toggleSwitch(this)">
+                                <div class="info">
+                                    <h4>Amati Pola Penggunaan</h4>
+                                    <p>Izinkan Luma mengamati ritme harianmu</p>
+                                </div>
+                                <div class="toggle-switch active">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Bottom Navigation -->
+                <div class="bottom-nav">
+                    <button class="nav-item active" onclick="switchTab('home')">
+                        <div class="icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+                        </div>
+                        <span class="label">Beranda</span>
+                    </button>
+                    <button class="nav-item" onclick="switchTab('rhythm')">
+                        <div class="icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                        </div>
+                        <span class="label">Ritme</span>
+                    </button>
+                    <button class="nav-item" onclick="switchTab('settings')">
+                        <div class="icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </div>
+                        <span class="label">Pengaturan</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Philosophy Section -->
+    <section class="philosophy reveal">
+        <div class="philosophy-content">
+            <h2 class="gradient-text">Tidak Ada yang Dijual</h2>
+            <p class="lead-text">
+                Luma bukan aplikasi produktivitas. Bukan alat meditasi.
+                Bukan tracker waktu layar. Bukan game dengan streak.
+            </p>
+            <p>
+                Luma adalah cermin yang memudar — seperti kenangan.
+                Semakin lama, semakin tidak tajam.
+                Bukan karena tidak berarti, tapi karena
+                tidak perlu diingat dengan sempurna untuk bermakna.
+            </p>
+            
+            <div class="quote-wrapper glass-panel">
+                <div class="quote-icon">"</div>
+                <blockquote class="quote">
+                    Tidak ada yang perlu dilakukan.<br>
+                    Tidak ada yang perlu diatur.<br>
+                    Luma hanya akan diam di sini,<br>
+                    mengamati ritme harianmu.
+                </blockquote>
+            </div>
+            
+            <p>
+                Dalam beberapa hari pertama, Luma belum bicara.
+                Itu bukan kekosongan — itu adalah perkenalan.
+                Seperti dua orang yang duduk bersama dalam diam,
+                sebelum akhirnya mengerti bahwa diam itu sendiri adalah bahasa.
+            </p>
+        </div>
+    </section>
+
+    <!-- Bento Box Features Section -->
+    <section class="features reveal">
+        <div class="bento-grid">
+            <div class="bento-card glass-panel bento-large">
+                <div class="bento-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h3>Murni Lokal</h3>
+                <p>
+                    Semua data hanya ada di perangkatmu.
+                    Tidak ada server Luma. Tidak ada cloud.
+                    Tidak ada yang bisa dijual, karena tidak ada yang tersimpan.
+                </p>
+                <div class="card-glow"></div>
+            </div>
+            
+            <div class="bento-card glass-panel">
+                <div class="bento-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+                <h3>Tanpa Angka</h3>
+                <p>
+                    Tidak ada dashboard, tidak ada grafik. Luma berbicara dalam bahasa — bukan statistik yang menghakimi.
+                </p>
+                <div class="card-glow"></div>
+            </div>
+            
+            <div class="bento-card glass-panel">
+                <div class="bento-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21.5 2v6h-6M2.13 15.57a9 9 0 1 0 3.84-10.4L2 2M2.5 22v-6h6"></path></svg>
+                </div>
+                <h3>Memudar</h3>
+                <p>
+                    Data memudar seperti ingatan. 7 hari tajam, 28 hari siluet. Untuk dilepaskan.
+                </p>
+                <div class="card-glow"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content glass-panel">
+            <div class="brand">Luma</div>
+            <div class="version">v1.0.0</div>
+            <p>Personal Digital Behavior Companion</p>
+            <p class="muted">Dibangun dengan diam, untuk mereka yang lelah dengan ribut.</p>
+        </div>
+    </footer>
+
+    <!-- Link to external JS -->
+    <script src="script.js"></script>
+</body>
+</html>

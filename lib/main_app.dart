@@ -71,10 +71,19 @@ class _MainAppState extends State<MainApp> {
       // 1. Inisialisasi WorkManager & daftarkan task periodik
       await BackgroundTaskInitializer.initialize();
       
-      // 2. Trigger Scenario 2 (Manual aggregateEvents) sebagai pemicu awal instan
-      await BackgroundTaskInitializer.triggerManualTask(BackgroundTasks.aggregateEvents);
+      // 2. Trigger Scenario 2 (Manual aggregateEvents) setelah jeda taktis 2 detik.
+      // Jeda asinkronus ini mencegah persaingan I/O & CPU antara UI thread utama yang sedang me-render
+      // halaman awal/transisi navigasi dan Isolate background baru yang memuat engine & Isar DB.
+      Future.delayed(const Duration(seconds: 2), () async {
+        try {
+          await BackgroundTaskInitializer.triggerManualTask(BackgroundTasks.aggregateEvents);
+          debugPrint('🚀 [MainApp] First background aggregation task triggered after startup delay.');
+        } catch (e) {
+          debugPrint('❌ [MainApp] Failed to trigger manual task: $e');
+        }
+      });
       
-      debugPrint('🚀 [MainApp] Background tasks initialized & first aggregation triggered');
+      debugPrint('🚀 [MainApp] Background tasks initialized.');
     } catch (e) {
       debugPrint('❌ [MainApp] Failed to initialize background tasks: $e');
     }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -77,14 +78,59 @@ class RhythmPage extends StatelessWidget {
 
 // ── Sub-widgets (theme-aware via context.luma) ─────────────────────────────
 
-class _TimelineCard extends StatelessWidget {
+class _TimelineCard extends StatefulWidget {
   final HomeNotifier home;
   final bool reduceMotion;
   const _TimelineCard({required this.home, required this.reduceMotion});
 
   @override
+  State<_TimelineCard> createState() => _TimelineCardState();
+}
+
+class _TimelineCardState extends State<_TimelineCard> {
+  String? _soothingText;
+  Timer? _resetTimer;
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    super.dispose();
+  }
+
+  void _triggerInteraction() {
+    _resetTimer?.cancel();
+    setState(() {
+      _soothingText = _getSoothingObservation(context);
+    });
+    _resetTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _soothingText = null;
+        });
+      }
+    });
+  }
+
+  String _getSoothingObservation(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final strings = context.l10n;
+    if (hour >= 5 && hour < 12) {
+      return strings.lumaMorningObservation;
+    } else if (hour >= 18 || hour < 5) {
+      return strings.lumaNightObservation;
+    } else {
+      return strings.lumaDayObservation;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.luma;
+    final baselineDays = widget.home.weeklyData
+        .where((d) => (d['screenTimeSeconds'] as int? ?? 0) > 0)
+        .length;
+    final isEmpty = baselineDays == 0;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       padding: const EdgeInsets.all(20),
@@ -106,13 +152,45 @@ class _TimelineCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           FadingLineChart(
-            weeklyData: home.weeklyData,
+            weeklyData: widget.home.weeklyData,
             height: 96,
-            reduceMotion: reduceMotion,
-            baselineDays: home.weeklyData
-                .where((d) => (d['screenTimeSeconds'] as int? ?? 0) > 0)
-                .length,
+            reduceMotion: widget.reduceMotion,
+            baselineDays: baselineDays,
+            onInteraction: isEmpty ? _triggerInteraction : null,
           ),
+          if (isEmpty) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 24, // keep constant height to prevent layout shift
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.15),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOut,
+                      )),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Text(
+                  _soothingText ?? context.l10n.patternLearning,
+                  key: ValueKey<String>(_soothingText ?? 'default'),
+                  style: GoogleFonts.cormorantGaramond(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: _soothingText != null ? p.accent : p.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

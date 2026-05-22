@@ -306,10 +306,32 @@ class SettingsNotifier extends ChangeNotifier {
     return _backupManager.listBackups();
   }
 
+  /// Hapus backup dari Drive
+  Future<bool> deleteBackup(String fileId) async {
+    _state = _state.copyWith(isLoading: true, clearError: true);
+    notifyListeners();
+    try {
+      final success = await _backupManager.deleteBackup(fileId);
+      _state = _state.copyWith(isLoading: false);
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _state = _state.copyWith(
+        isLoading: false,
+        error: languageCode == 'id'
+            ? 'Gagal menghapus: ${_friendlyError(e)}'
+            : 'Failed to delete: ${_friendlyError(e)}',
+      );
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Estimasi ukuran backup dalam bytes
   Future<int> estimateBackupSize() async {
     return _backupManager.estimateBackupSize();
   }
+
 
   // ─────────────────────── INTERNAL ───────────────────────
 

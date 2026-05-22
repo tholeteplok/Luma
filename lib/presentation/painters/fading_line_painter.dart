@@ -19,22 +19,40 @@ import '../../core/utils/fade_granularity.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 double _dotPositionRatio(int baselineDays) {
-  if (baselineDays <= 2)  return 0.07;
-  if (baselineDays <= 4)  return 0.18;
-  if (baselineDays <= 7)  return 0.33;
-  if (baselineDays <= 14) return 0.50;
-  if (baselineDays <= 28) return 0.70;
-  return 0.88; // max — tidak pernah 1.0
+  if (baselineDays <= 1)  return 0.07; // Hari 1
+  if (baselineDays == 2)  return 0.18; // Hari 2
+  if (baselineDays <= 4)  return 0.33; // Hari 3-4
+  if (baselineDays <= 7)  return 0.50; // Hari 5-7
+  if (baselineDays <= 14) return 0.70; // Hari 8-14
+  return 0.88; // Hari 15+ (tidak pernah 1.0)
 }
 
 /// Panjang garis solid (0.0–1.0) berdasarkan usia data
 double _solidLineRatio(int baselineDays) {
-  if (baselineDays <= 2)  return 0.08;
-  if (baselineDays <= 4)  return 0.22;
-  if (baselineDays <= 7)  return 0.40;
-  if (baselineDays <= 14) return 0.60;
-  if (baselineDays <= 28) return 0.78;
+  if (baselineDays <= 1)  return 0.08;
+  if (baselineDays == 2)  return 0.22;
+  if (baselineDays <= 4)  return 0.40;
+  if (baselineDays <= 7)  return 0.60;
+  if (baselineDays <= 14) return 0.78;
   return 0.92;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  RIPPLE MODELS
+// ─────────────────────────────────────────────────────────────────────────────
+
+class RippleInfo {
+  final Offset position;
+  final double progress;
+
+  RippleInfo({required this.position, required this.progress});
+}
+
+class RippleEffect {
+  final Offset position;
+  final AnimationController controller;
+
+  RippleEffect({required this.position, required this.controller});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,6 +80,9 @@ class FadingLinePainter extends CustomPainter {
   /// Berapa hari data tersedia — menentukan posisi titik dan panjang garis solid
   final int baselineDays;
 
+  /// Daftar riak air berpendar (bioluminescent ripples)
+  final List<RippleInfo> ripples;
+
   const FadingLinePainter({
     required this.weeklyData,
     required this.today,
@@ -70,6 +91,7 @@ class FadingLinePainter extends CustomPainter {
     required this.lineColor,
     required this.accentColor,
     this.baselineDays = 0,
+    this.ripples = const [],
   });
 
   @override
@@ -87,10 +109,10 @@ class FadingLinePainter extends CustomPainter {
     );
 
     // ── Garis solid (kiri — data sudah ada) ───────────────────────────────────
-    if (weeklyData.isNotEmpty) {
+    if (weeklyData.isNotEmpty && baselineDays > 1) {
       _paintSolidLine(canvas, size, solidEnd, centerY);
     } else {
-      // Tidak ada data — garis solid minimal dari kiri ke titik
+      // Tidak ada data / Hari pertama — garis solid minimal dari kiri ke titik
       _paintSimpleLine(
         canvas,
         Offset(0, centerY),
@@ -102,6 +124,47 @@ class FadingLinePainter extends CustomPainter {
     // ── Titik detak jantung ───────────────────────────────────────────────────
     final dotY = centerY + heartbeatOffset;
     _paintDot(canvas, Offset(dotX, dotY));
+
+    // ── Bioluminescent Ripples ───────────────────────────────────────────────
+    if (ripples.isNotEmpty) {
+      for (final ripple in ripples) {
+        _paintRipple(canvas, ripple.position, ripple.progress);
+      }
+    }
+  }
+
+  void _paintRipple(Canvas canvas, Offset center, double progress) {
+    final maxRadius = 100.0;
+    final radius = progress * maxRadius;
+    final opacity = (1.0 - progress).clamp(0.0, 1.0);
+
+    // 1. Outer soft glowing ring
+    final outerPaint = Paint()
+      ..color = accentColor.withValues(alpha: opacity * 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8.0);
+
+    canvas.drawCircle(center, radius, outerPaint);
+
+    // 2. Middle sharp glowing ring
+    final innerPaint = Paint()
+      ..color = accentColor.withValues(alpha: opacity * 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 2.0);
+
+    canvas.drawCircle(center, radius, innerPaint);
+
+    // 3. Central glowing aura
+    final centerPaint = Paint()
+      ..color = accentColor.withValues(alpha: opacity * 0.25)
+      ..style = PaintingStyle.fill
+      ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, 12.0 + progress * 10.0);
+
+    canvas.drawCircle(center, radius * 0.35, centerPaint);
   }
 
   /// Garis solid dengan fade granularity per segmen
@@ -115,8 +178,18 @@ class FadingLinePainter extends CustomPainter {
     final points = <Offset>[];
     for (int i = 0; i < count; i++) {
       final score = (weeklyData[i]['focusScore'] as num? ?? 50).toDouble();
+      final screenTime = weeklyData[i]['screenTimeSeconds'] as int? ?? 0;
+
+      // Dynamic wave dampening based on screen time
+      double ampFactor = 1.0;
+      if (screenTime < 600) {
+        ampFactor = 0.0; // Garis lurus rata jika data sangat minim (<10 menit)
+      } else if (screenTime < 3600) {
+        ampFactor = (screenTime - 600) / 3000.0; // Transisi gelombang gradual
+      }
+
       // Normalize score 0–100 ke amplitudo ±12px di sekitar centerY
-      final amplitude = 12.0;
+      final amplitude = 12.0 * ampFactor;
       final normalized = (score / 100.0 - 0.5) * 2; // -1.0 to 1.0
       final y = centerY - normalized * amplitude;
       points.add(Offset(i * stepX, y));
@@ -231,7 +304,8 @@ class FadingLinePainter extends CustomPainter {
       old.lineColor != lineColor ||
       old.accentColor != accentColor ||
       old.baselineDays != baselineDays ||
-      old.weeklyData != weeklyData;
+      old.weeklyData != weeklyData ||
+      old.ripples != ripples;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -253,12 +327,16 @@ class FadingLineChart extends StatefulWidget {
   /// Berapa hari data tersedia — menentukan posisi titik
   final int baselineDays;
 
+  /// Callback interaktif saat disentuh/pinch
+  final VoidCallback? onInteraction;
+
   const FadingLineChart({
     super.key,
     required this.weeklyData,
     this.height = 72,
     this.reduceMotion = false,
     this.baselineDays = 0,
+    this.onInteraction,
   });
 
   @override
@@ -273,6 +351,9 @@ class _FadingLineChartState extends State<FadingLineChart>
   // Detak jantung — naik turun pelan seperti napas
   late final AnimationController _heartbeatController;
   late final Animation<double> _heartbeatAnim;
+
+  // Daftar riak air aktif
+  final List<RippleEffect> _ripples = [];
 
   @override
   void initState() {
@@ -307,7 +388,44 @@ class _FadingLineChartState extends State<FadingLineChart>
   void dispose() {
     _drawController.dispose();
     _heartbeatController.dispose();
+    for (final ripple in _ripples) {
+      ripple.controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _handleInteraction(Offset localPosition) {
+    if (widget.onInteraction != null) {
+      widget.onInteraction!();
+    }
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    final ripple = RippleEffect(
+      position: localPosition,
+      controller: controller,
+    );
+
+    controller.addListener(() {
+      setState(() {});
+    });
+
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _ripples.remove(ripple);
+        controller.dispose();
+        setState(() {});
+      }
+    });
+
+    setState(() {
+      _ripples.add(ripple);
+    });
+
+    controller.forward();
   }
 
   @override
@@ -316,37 +434,66 @@ class _FadingLineChartState extends State<FadingLineChart>
     final lineColor = p.accent.withValues(alpha: 0.6);
     const amplitudePx = 3.0; // ±3px — halus, tidak dramatis
 
+    final isChartEmpty = widget.weeklyData.isEmpty || widget.baselineDays == 0;
+
+    Widget chartWidget = widget.reduceMotion
+        ? CustomPaint(
+            size: Size.infinite,
+            painter: FadingLinePainter(
+              weeklyData: widget.weeklyData,
+              today: DateTime.now(),
+              drawProgress: 1.0,
+              heartbeatOffset: 0,
+              lineColor: lineColor,
+              accentColor: p.accent,
+              baselineDays: widget.baselineDays,
+              ripples: _ripples
+                  .map((r) => RippleInfo(
+                        position: r.position,
+                        progress: r.controller.value,
+                      ))
+                  .toList(),
+            ),
+          )
+        : AnimatedBuilder(
+            animation: Listenable.merge([_drawAnim, _heartbeatAnim]),
+            builder: (context, _) => CustomPaint(
+              size: Size.infinite,
+              painter: FadingLinePainter(
+                weeklyData: widget.weeklyData,
+                today: DateTime.now(),
+                drawProgress: _drawAnim.value,
+                heartbeatOffset: _heartbeatAnim.value * amplitudePx,
+                lineColor: lineColor,
+                accentColor: p.accent,
+                baselineDays: widget.baselineDays,
+                ripples: _ripples
+                    .map((r) => RippleInfo(
+                          position: r.position,
+                          progress: r.controller.value,
+                        ))
+                    .toList(),
+              ),
+            ),
+          );
+
+    if (isChartEmpty) {
+      chartWidget = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (details) {
+          _handleInteraction(details.localPosition);
+        },
+        onScaleStart: (details) {
+          _handleInteraction(details.localFocalPoint);
+        },
+        child: chartWidget,
+      );
+    }
+
     return RepaintBoundary(
       child: SizedBox(
         height: widget.height,
-        child: widget.reduceMotion
-            ? CustomPaint(
-                size: Size.infinite,
-                painter: FadingLinePainter(
-                  weeklyData: widget.weeklyData,
-                  today: DateTime.now(),
-                  drawProgress: 1.0,
-                  heartbeatOffset: 0,
-                  lineColor: lineColor,
-                  accentColor: p.accent,
-                  baselineDays: widget.baselineDays,
-                ),
-              )
-            : AnimatedBuilder(
-                animation: Listenable.merge([_drawAnim, _heartbeatAnim]),
-                builder: (context, _) => CustomPaint(
-                  size: Size.infinite,
-                  painter: FadingLinePainter(
-                    weeklyData: widget.weeklyData,
-                    today: DateTime.now(),
-                    drawProgress: _drawAnim.value,
-                    heartbeatOffset: _heartbeatAnim.value * amplitudePx,
-                    lineColor: lineColor,
-                    accentColor: p.accent,
-                    baselineDays: widget.baselineDays,
-                  ),
-                ),
-              ),
+        child: chartWidget,
       ),
     );
   }

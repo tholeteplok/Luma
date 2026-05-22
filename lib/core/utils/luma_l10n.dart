@@ -127,4 +127,8 @@ class LumaStrings {
   // ── FadingLineChart ────────────────────────────────────────────────────────
   String get patternsSaved => _t('Pola tetap tersimpan.', 'Patterns remain.');
   String get lumaObservingRhythm => _t('Luma mengamati ritmemu.', 'Luma is observing your rhythm.');
+  String get patternLearning => _t('Pola masih dipelajari...', 'Pattern still being learned...');
+  String get lumaMorningObservation => _t('Luma menangkap awal pagimu yang sunyi...', 'Luma catches the silence of your early morning...');
+  String get lumaNightObservation => _t('Mendengarkan frekuensi malammu...', 'Listening to the frequency of your night...');
+  String get lumaDayObservation => _t('Menyelaraskan dengan deru harimu...', 'Aligning with the hum of your day...');
 }

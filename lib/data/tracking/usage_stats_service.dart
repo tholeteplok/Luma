@@ -55,7 +55,7 @@ class UsageStatsService {
         if (packageName == null) continue;
 
         // Skip aplikasi sistem dan Luma sendiri
-        if (_isSystemApp(packageName) || packageName == 'luma') {
+        if (_isSystemApp(packageName) || _isLumaApp(packageName)) {
           continue;
         }
 
@@ -123,7 +123,7 @@ class UsageStatsService {
       final latestApp = validList.first;
 
       // Skip sistem dan Luma
-      if (_isSystemApp(latestApp.packageName!) || latestApp.packageName == 'luma') {
+      if (_isSystemApp(latestApp.packageName!) || _isLumaApp(latestApp.packageName!)) {
         return null;
       }
 
@@ -142,6 +142,13 @@ class UsageStatsService {
       _log.severe('Error getting current foreground app: $e');
       return null;
     }
+  }
+
+  /// Cek apakah package adalah aplikasi Luma sendiri
+  bool _isLumaApp(String packageName) {
+    return packageName == 'luma' || 
+           packageName == 'com.tholteplok.luma' || 
+           packageName.endsWith('.luma');
   }
 
   /// Cek apakah package adalah aplikasi sistem
@@ -186,7 +193,7 @@ class UsageStatsService {
         final packageName = usage.packageName;
         if (packageName == null) continue;
         
-        if (_isSystemApp(packageName) || packageName == 'luma') {
+        if (_isSystemApp(packageName) || _isLumaApp(packageName)) {
           continue;
         }
 
